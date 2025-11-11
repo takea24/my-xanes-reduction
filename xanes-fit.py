@@ -1,10 +1,11 @@
-# xanes-fit-with-pulseref.py
+# xanes-fit-with-pulseref.py (改良版)
 import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_filter1d
+from scipy.signal import savgol_filter
 import io
 import zipfile
 import plotly.graph_objects as go
@@ -40,8 +41,6 @@ def two_gauss(E, A1, mu1, sigma1, A2, mu2, sigma2):
 # -----------------------------
 # Fe-foil解析関数
 # -----------------------------
-from scipy.signal import savgol_filter
-
 SKIP_HEADER = 3
 SG_WINDOW = 31
 SG_POLY = 5
@@ -100,9 +99,12 @@ def find_zero_crossing(p, d2):
 # -----------------------------
 st.title("XANES Multiple File Fitting with Pulse Reference")
 
+st.subheader("Step 0: Fe-foil background settings")
+bg_low = st.number_input("Lower background limit (eV, ≤)", value=7110.0, step=0.01)
+bg_high = st.number_input("Upper background limit (eV, ≥)", value=7114.0, step=0.01)
+
 st.subheader("Step 1: Pulse Reference Selection")
 method = st.radio("Choose pulse reference method:", ["Input manually", "Analyze Fe-foil file"])
-
 pulse_ref = None
 
 if method=="Input manually":
@@ -133,6 +135,7 @@ elif method=="Analyze Fe-foil file":
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu[mask], mode='lines+markers', name='mu', line=dict(color='black')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu_s[mask], mode='lines', name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=d2[mask], mode='lines', name='d2', line=dict(dash='dash'), yaxis='y2'))
+        fig.add_hline(y=0, yaxis='y2', line=dict(color='blue', dash='dot'))  # ← y=0水平線
         fig.add_vline(x=pulse_ref, line=dict(color='red', dash='dash'))
         fig.update_layout(xaxis_title="Pulse", yaxis=dict(title="mu"), yaxis2=dict(title="d2", overlaying='y', side='right'), width=800, height=400)
         st.plotly_chart(fig, use_container_width=True)
@@ -166,8 +169,8 @@ if pulse_ref is not None:
                 FeKa_smooth=FeKa_smooth[sort_idx]
 
                 # Baseline
-                mask_low = energy <=7109
-                mask_high=energy>=7114
+                mask_low = energy <= bg_low
+                mask_high=energy >= bg_high
                 E_low = energy[mask_low][np.argmax(FeKa_smooth[mask_low])]
                 I_low = FeKa_smooth[mask_low][np.argmax(FeKa_smooth[mask_low])]
                 E_high = energy[mask_high][np.argmin(FeKa_smooth[mask_high])]
@@ -218,11 +221,16 @@ if pulse_ref is not None:
                 plt.close(fig_mpl)
                 st.download_button(f"Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
 
+                # -----------------------------
                 # Plotly
+                # -----------------------------
                 fig_plotly=go.Figure()
                 fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_norm,mode='markers',name='raw',marker=dict(color='black',opacity=0.5)))
                 fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_smooth,mode='lines',name='smoothed',line=dict(color='gray')))
                 fig_plotly.add_trace(go.Scatter(x=energy,y=baseline,mode='lines',name='baseline',line=dict(color='red',dash='dash')))
+                # Gaussians追加
+                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g1+baseline[mask_gauss],mode='lines',name='Gaussian1',line=dict(color='green',dash='dash')))
+                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g2+baseline[mask_gauss],mode='lines',name='Gaussian2',line=dict(color='magenta',dash='dash')))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss,y=gauss_fit+baseline[mask_gauss],mode='lines',name='Total fit',line=dict(color='blue')))
                 fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
                 fig_plotly.update_layout(
@@ -233,6 +241,7 @@ if pulse_ref is not None:
                     yaxis_title="Normalized intensity"
                 )
                 st.plotly_chart(fig_plotly,use_container_width=True)
+
             except Exception as e:
                 st.error(f"Error processing {uploaded_file.name}: {e}")
 
