@@ -137,8 +137,8 @@ elif method=="Fe-foil fileの二階微分解析":
         fig.update_layout(xaxis_title="Pulse", yaxis=dict(title="mu"), yaxis2=dict(title="d2", overlaying='y', side='right'), width=800, height=400)
         st.plotly_chart(fig, use_container_width=True)
 
-        if st.button("Confirm pulse reference"):
-            st.success(f"Confirmed pulse reference: {pulse_ref}")
+        if st.button("Confirm pulse reference (確定したら押す）"):
+            st.success(f"Confirmed pulse reference (確定したら押す）: {pulse_ref}")
 
 # -----------------------------
 # Step 2: XANES Multiple File Fitting
