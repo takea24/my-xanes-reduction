@@ -222,27 +222,6 @@ if st.session_state.step1_done:
                 area2 = popt[3]*popt[5]*np.sqrt(2*np.pi)
                 centroid = (popt[1]*area1 + popt[4]*area2)/(area1+area2)
 
-                                # Plotly
-                fig_plotly=go.Figure()
-                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_norm,mode='markers',name='raw',marker=dict(color='black',opacity=0.5)))
-                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_smooth,mode='lines',name='smoothed',line=dict(color='gray')))
-                fig_plotly.add_trace(go.Scatter(x=energy,y=baseline,mode='lines',name='baseline',line=dict(color='red',dash='dash')))
-                # Gaussians
-                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g1+baseline[mask_gauss],mode='lines',name='Gaussian1',line=dict(color='green',dash='dash', width=3)))
-                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g2+baseline[mask_gauss],mode='lines',name='Gaussian2',line=dict(color='magenta',dash='dash', width=3)))
-                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=gauss_fit+baseline[mask_gauss],mode='lines',name='Total fit',line=dict(color='blue', width=1)))
-                # パルスリファレンス表示など不要
-                fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
-                fig_plotly.update_layout(
-                    xaxis=dict(range=[7108,7116]),
-                    yaxis=dict(range=[0,ylim_max]),
-                    title=uploaded_file.name,
-                    xaxis_title="Energy (eV)",
-                    yaxis_title="Normalized intensity"
-                )
-                st.plotly_chart(fig_plotly,use_container_width=True)
-
-
                 # Matplotlib
                 fig_mpl, ax = plt.subplots(figsize=(10,6), constrained_layout=True)
                 ax.plot(energy, FeKa_norm, 'ko', alpha=0.5, label='raw')
@@ -267,6 +246,30 @@ if st.session_state.step1_done:
                 png_buffer.seek(0)
                 png_buffers.append((uploaded_file.name,png_buffer))
                 plt.close(fig_mpl)
+
+                # Plotly
+                fig_plotly=go.Figure()
+                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_norm,mode='markers',name='raw',marker=dict(color='black',opacity=0.5)))
+                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_smooth,mode='lines',name='smoothed',line=dict(color='gray')))
+                fig_plotly.add_trace(go.Scatter(x=energy,y=baseline,mode='lines',name='baseline',line=dict(color='red',dash='dash')))
+                # Gaussians
+                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g1+baseline[mask_gauss],mode='lines',name='Gaussian1',line=dict(color='green',dash='dash', width=3)))
+                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g2+baseline[mask_gauss],mode='lines',name='Gaussian2',line=dict(color='magenta',dash='dash', width=3)))
+                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=gauss_fit+baseline[mask_gauss],mode='lines',name='Total fit',line=dict(color='blue', width=1)))
+                # パルスリファレンス表示など不要
+                fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
+                fig_plotly.update_layout(
+                    xaxis=dict(range=[7108,7116]),
+                    yaxis=dict(range=[0,ylim_max]),
+                    title=uploaded_file.name,
+                    xaxis_title="Energy (eV)",
+                    yaxis_title="Normalized intensity"
+                )
+                st.plotly_chart(fig_plotly,use_container_width=True)
+
+
+                # Matplotlib保存ボタン
+
                 st.download_button(f"個別Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
 
 
