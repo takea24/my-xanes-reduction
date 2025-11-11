@@ -246,7 +246,7 @@ if st.session_state.pulse_ref is not None:
                 fig_plotly.add_trace(go.Scatter(x=energy, y=baseline, mode='lines', name='baseline', line=dict(color='red', dash='dash')))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss, y=g1+baseline[mask_gauss], mode='lines', name='Gaussian1', line=dict(color='green', dash='dash', width=3)))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss, y=g2+baseline[mask_gauss], mode='lines', name='Gaussian2', line=dict(color='magenta', dash='dash', width=3)))
-                fig_plotly.add_trace(go.Scatter(x=E_gauss, y=gauss_fit+baseline[mask_gauss], mode='lines', name='Total fit', line=dict(color='blue', width=3)))
+                fig_plotly.add_trace(go.Scatter(x=E_gauss, y=gauss_fit+baseline[mask_gauss], mode='lines', name='Total fit', line=dict(color='blue', width=1)))
 
                 x_min, x_max = 7108, 7116
                 ylim_max = max(
