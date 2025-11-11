@@ -136,7 +136,7 @@ elif method=="Fe-foil fileの二階微分解析":
         fig.add_vline(x=pulse_ref, line=dict(color='yellow', dash='dash'))
         fig.add_hline(
             y=0,
-            yref='y2'
+            yref='y2',
             line=dict(color='black', width=3, dash='solid'),  # 太さ3の実線
             annotation_text="y=0",  # 任意でラベル
             annotation_position="top right"
