@@ -174,7 +174,7 @@ if pulse_ref is not None:
 
                 # Baseline
                 mask_low = energy <=7110
-                mask_high=energy>=7114.5
+                mask_high=energy>=7114
                 E_low = energy[mask_low][np.argmax(FeKa_smooth[mask_low])]
                 I_low = FeKa_smooth[mask_low][np.argmax(FeKa_smooth[mask_low])]
                 E_high = energy[mask_high][np.argmin(FeKa_smooth[mask_high])]
@@ -226,20 +226,48 @@ if pulse_ref is not None:
                 st.download_button(f"個別Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
 
                 # Plotly
-                fig_plotly=go.Figure()
-                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_norm,mode='markers',name='raw',marker=dict(color='black',opacity=0.5)))
-                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_smooth,mode='lines',name='smoothed',line=dict(color='gray')))
-                fig_plotly.add_trace(go.Scatter(x=energy,y=baseline,mode='lines',name='baseline',line=dict(color='red',dash='dash')))
-                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=gauss_fit+baseline[mask_gauss],mode='lines',name='Total fit',line=dict(color='blue')))
-                fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
+                fig_plotly = go.Figure()
+
+                # 元データ
+                fig_plotly.add_trace(go.Scatter(
+                    x=energy, y=FeKa_norm, mode='markers', name='raw', marker=dict(color='black', opacity=0.5)
+                ))
+                fig_plotly.add_trace(go.Scatter(
+                    x=energy, y=FeKa_smooth, mode='lines', name='smoothed', line=dict(color='gray')
+                ))
+                fig_plotly.add_trace(go.Scatter(
+                    x=energy, y=baseline, mode='lines', name='baseline', line=dict(color='red', dash='dash')
+                ))
+
+                # 個別ガウス
+                g1 = gaussian(E_gauss, popt[0], popt[1], popt[2])
+                g2 = gaussian(E_gauss, popt[3], popt[4], popt[5])
+                fig_plotly.add_trace(go.Scatter(
+                    x=E_gauss, y=g1 + baseline[mask_gauss], mode='lines', name='Gaussian1', line=dict(color='green', dash='dash')
+                ))
+                fig_plotly.add_trace(go.Scatter(
+                    x=E_gauss, y=g2 + baseline[mask_gauss], mode='lines', name='Gaussian2', line=dict(color='magenta', dash='dash')
+                ))
+
+                # Total fit
+                gauss_fit = g1 + g2
+                fig_plotly.add_trace(go.Scatter(
+                    x=E_gauss, y=gauss_fit + baseline[mask_gauss], mode='lines', name='Total fit', line=dict(color='blue')
+                ))
+
+                # Centroid
+                fig_plotly.add_vline(x=centroid, line=dict(color='blue', dash='dot'),
+                                     annotation_text=f"Centroid={centroid:.2f}", annotation_position="top right")
+
+                # レイアウト
                 fig_plotly.update_layout(
-                    xaxis=dict(range=[7108,7116]),
-                    yaxis=dict(range=[0,ylim_max]),
+                    xaxis=dict(range=[7108, 7116]),
+                    yaxis=dict(range=[0, ylim_max]),
                     title=uploaded_file.name,
                     xaxis_title="Energy (eV)",
                     yaxis_title="Normalized intensity"
                 )
-                st.plotly_chart(fig_plotly,use_container_width=True)
+                st.plotly_chart(fig_plotly, use_container_width=True)
             except Exception as e:
                 st.error(f"Error processing {uploaded_file.name}: {e}")
 
