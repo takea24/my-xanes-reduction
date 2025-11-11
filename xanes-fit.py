@@ -312,6 +312,7 @@ if st.session_state.step1_done:
             st.download_button("Download all PNGs as ZIP", zip_buffer, file_name="all_fittings.zip")
 
         # ループ終了後
+        st.write("Processed files count:", len(all_params))
         if all_params:
             df_all = pd.DataFrame(all_params)
             st.subheader("Summary of all fittings")
