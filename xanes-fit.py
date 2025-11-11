@@ -101,7 +101,7 @@ def find_zero_crossing(p, d2):
 st.title("XANES pre-edge 解析")
 
 st.subheader("Step 1: Pulse Reference Selection パルス-エネルギー変換")
-method = st.radio("Choose pulse reference method:", ["Input manually パルスの手動入力", "Fe-foil fileの二階微分解析"])
+method = st.radio("Fe-foilの第一変曲点位置:", ["Input manually パルスの手動入力", "Fe-foil fileの二階微分解析"])
 
 pulse_ref = None
 
