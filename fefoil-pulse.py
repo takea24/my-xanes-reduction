@@ -1,9 +1,10 @@
-# fefoil-pulse.py
+# fefoil-pulse.py (Streamlit完全版)
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 import os
+import plotly.graph_objects as go
 
 # ---------- user-configurable ----------
 SKIP_HEADER = 3
@@ -11,6 +12,7 @@ SG_WINDOW = 31
 SG_POLY = 5
 SEARCH_MIN = 581650
 OUT_DECIMALS = 1
+SLIDER_RANGE = 1000   # ±範囲
 # -------------------------------------
 
 def load_xanes_file(file, skip_header=SKIP_HEADER):
@@ -79,50 +81,86 @@ def save_result_txt(chosen_pulse, filename, decimals=OUT_DECIMALS):
         f.write(f"pulse: {chosen_pulse:.{decimals}f}\n")
     return fname
 
+def save_static_png(pulse, mu, mu_s, d2, chosen_pulse, filename):
+    mask = pulse >= SEARCH_MIN
+    p_plot = pulse[mask]
+    mu_plot = mu[mask]
+    mu_s_plot = mu_s[mask]
+    d2_plot = d2[mask]
+
+    fig, ax1 = plt.subplots(figsize=(8,4))
+    ax2 = ax1.twinx()
+    ax1.plot(p_plot, mu_plot, label="mu", color='black')
+    ax1.plot(p_plot, mu_s_plot, label="mu_smooth", color='gray')
+    ax2.plot(p_plot, d2_plot, label="d2", linestyle='--')
+    ax2.axhline(0, color='black', linewidth=1)
+    ax1.axvline(chosen_pulse, color='red', linestyle='--', label=f'selected={chosen_pulse:.1f}')
+    ax1.set_xlabel("Pulse")
+    ax1.set_ylabel("mu")
+    ax2.set_ylabel("d2")
+    ax1.legend(loc='best')
+    plt.tight_layout()
+    base = os.path.splitext(filename)[0]
+    png_file = f"{base}_{chosen_pulse:.1f}.png"
+    fig.savefig(png_file, dpi=300)
+    plt.close(fig)
+    return png_file
+
 # ---------- Streamlit UI ----------
 st.title("Fe Foil E0 Pulse Determination (XANES)")
 
 uploaded_file = st.file_uploader("Select Fe foil .dat file", type=['dat','txt'])
+
 if uploaded_file is not None:
     try:
         pulse, mu = load_xanes_file(uploaded_file)
         mu_s, d2 = compute_smoothed_d2(pulse, mu)
         guess_pulse, idx = find_zero_crossing(pulse, d2)
 
-        # スライダーで手動選択
-        min_p, max_p = float(pulse.min()), float(pulse.max())
-        selected_pulse = st.slider("Select pulse manually", min_p, max_p, float(guess_pulse if guess_pulse else min_p))
-
-        # グラフ描画
         st.subheader("Pulse Data & Smoothed 2nd Derivative")
-        fig, ax1 = plt.subplots(figsize=(8,4))
-        ax2 = ax1.twinx()
+
+        # スライダー
+        slider_min = int(guess_pulse - SLIDER_RANGE)
+        slider_max = int(guess_pulse + SLIDER_RANGE)
+        selected_pulse = st.slider(
+            "Adjust pulse manually",
+            min_value=slider_min,
+            max_value=slider_max,
+            value=int(guess_pulse),
+            step=1
+        )
+
+        # Plotlyでインタラクティブグラフ
         mask = pulse >= SEARCH_MIN
         p_plot = pulse[mask]
         mu_plot = mu[mask]
         mu_s_plot = mu_s[mask]
         d2_plot = d2[mask]
 
-        ax1.plot(p_plot, mu_plot, label="mu (FeKa/I0)", color='black')
-        ax1.plot(p_plot, mu_s_plot, label="mu_smooth", color='gray', linewidth=1)
-        ax2.plot(p_plot, d2_plot, label="d2", linestyle='--')
-        ax2.axhline(0, color='black', linewidth=1)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=p_plot, y=mu_plot, mode='lines+markers', name='mu'))
+        fig.add_trace(go.Scatter(x=p_plot, y=mu_s_plot, mode='lines', name='mu_smooth'))
+        fig.add_trace(go.Scatter(x=p_plot, y=d2_plot, mode='lines', name='d2', yaxis='y2'))
 
-        if guess_pulse is not None:
-            ax1.axvline(guess_pulse, color='r', linestyle='--', label=f"guess={guess_pulse:.1f}")
+        # スライダー追従縦線
+        fig.add_vline(x=selected_pulse, line=dict(color='red', dash='dash'))
 
-        # 選択値を縦線で表示
-        ax1.axvline(selected_pulse, color='blue', linestyle='-', linewidth=2, label=f"selected={selected_pulse:.1f}")
+        fig.update_layout(
+            yaxis=dict(title='mu'),
+            yaxis2=dict(title='d2', overlaying='y', side='right')
+        )
 
-        ax1.set_xlabel("Pulse")
-        ax1.set_ylabel("mu")
-        ax2.set_ylabel("d2")
-        ax1.legend(loc='best')
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)
+        st.write(f"Selected pulse: {selected_pulse}")
 
-        # 選択値を保存
+        # 結果保存
         out_file = save_result_txt(selected_pulse, uploaded_file.name)
-        st.success(f"Selected pulse saved: {selected_pulse:.1f}")
         st.download_button("Download result txt", data=open(out_file,'r').read(), file_name=out_file)
+
+        # PNG出力
+        png_file = save_static_png(pulse, mu, mu_s, d2, selected_pulse, uploaded_file.name)
+        with open(png_file,'rb') as f:
+            st.download_button("Download PNG graph", data=f, file_name=png_file)
+
     except Exception as e:
         st.error(f"Error: {e}")
