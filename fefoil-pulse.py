@@ -1,23 +1,23 @@
-# fefoil-pulse-plotly.py
+# fefoil-pulse-plotly-realtime.py
 import streamlit as st
 import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter
 import plotly.graph_objects as go
+from streamlit_plotly_events import plotly_events  # pip install streamlit-plotly-events
 
-# ---------- user-configurable ----------
+# ---------- 設定 ----------
 SKIP_HEADER = 3
 SG_WINDOW = 31
 SG_POLY = 5
 SEARCH_MIN = 581650
-# -------------------------------------
 
+# ---------- データ読み込み ----------
 def load_xanes_file(file):
     pulse_list = []
     mu_list = []
     lines = file.read().decode('utf-8', errors='ignore').splitlines()
     lines = lines[SKIP_HEADER:]
-
     for line in lines:
         s = line.strip()
         if not s or s.startswith('#'):
@@ -35,7 +35,6 @@ def load_xanes_file(file):
             continue
         pulse_list.append(p)
         mu_list.append(FeKa / I0)
-
     if len(pulse_list) == 0:
         raise RuntimeError("No valid numeric data found.")
     return np.array(pulse_list), np.array(mu_list)
@@ -65,7 +64,7 @@ def find_zero_crossing(p, d2):
             return x0
     return None
 
-# ---------- Streamlit UI ----------
+# ---------- Streamlit ----------
 st.title("Fe Foil E0 Pulse Determination (XANES)")
 
 uploaded_file = st.file_uploader("Select Fe foil .dat file", type=['dat','txt'])
@@ -78,17 +77,10 @@ if uploaded_file is not None:
         # グラフ横軸範囲
         min_p, max_p = int(pulse.min()), int(pulse.max())
 
-        # スライダー選択
-        st.subheader("Select Pulse")
-        chosen = st.slider(
-            "Adjust pulse",
-            min_value=min_p,
-            max_value=max_p,
-            value=int(guess_pulse) if guess_pulse else min_p,
-            step=1
-        )
+        # 初期値
+        chosen_pulse = int(guess_pulse) if guess_pulse else min_p
 
-        # Plotly グラフ
+        st.subheader("Interactive Graph")
         mask = pulse >= SEARCH_MIN
         p_plot = pulse[mask]
         mu_plot = mu[mask]
@@ -102,22 +94,31 @@ if uploaded_file is not None:
                                  name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=p_plot, y=d2_plot, mode='lines',
                                  name='d2', line=dict(dash='dash'), yaxis='y2'))
-        # 縦線
-        fig.add_vline(x=chosen, line=dict(color='red', dash='dash'), name='Selected pulse')
+        # 縦線（初期値）
+        fig.add_vline(x=chosen_pulse, line=dict(color='red', dash='dash'))
 
-        # 2軸設定
         fig.update_layout(
             xaxis_title="Pulse",
             yaxis=dict(title="mu"),
             yaxis2=dict(title="d2", overlaying='y', side='right'),
             width=800,
-            height=400,
-            margin=dict(l=50, r=50, t=50, b=50)
+            height=400
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        # Plotly イベントを使用して縦線を選択
+        selected_points = plotly_events(
+            fig, 
+            click_event=False, 
+            hover_event=False, 
+            select_event=True,  # 範囲選択で追従可能
+            key="pulse_selector"
+        )
 
-        st.success(f"Selected pulse: {chosen:.1f}")
+        # 選択したpulseを取得
+        if selected_points:
+            # 範囲選択の最初のxを使用
+            chosen_pulse = selected_points[0]['x']
+        st.success(f"Selected pulse: {chosen_pulse:.1f}")
 
     except Exception as e:
         st.error(f"Error: {e}")
