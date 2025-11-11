@@ -261,28 +261,18 @@ if pulse_ref is not None:
                 st.plotly_chart(fig_plotly,use_container_width=True)
 
                 # popt = [A1, mu1, sigma1, A2, mu2, sigma2]
+                df = pd.DataFrame({
+                    "Gaussian 1": [A1, mu1, sigma1, area1],
+                    "Gaussian 2": [A2, mu2, sigma2, area2],
+                }, index=["A", "μ (eV)", "σ", "Area"])
 
-                A1, mu1, sigma1, A2, mu2, sigma2 = popt
-                area1 = A1 * sigma1 * np.sqrt(2*np.pi)
-                area2 = A2 * sigma2 * np.sqrt(2*np.pi)
-                centroid = (mu1 * area1 + mu2 * area2) / (area1 + area2)
+                st.write(f"### Gaussian Fit Parameters — {uploaded_file.name}")
+                st.dataframe(df.style.format("{:.4g}"))
 
-                st.markdown(f"""
-                **Gaussian Fit Parameters — {uploaded_file.name}**
-                - **Gaussian 1**  
-                  - A = {A1:.4g}  
-                  - μ = {mu1:.4f} eV  
-                  - σ = {sigma1:.4f}  
-                  - Area = {area1:.4g}
+                st.write(f"**Centroid** = {centroid:.4f} eV")
 
-                - **Gaussian 2**  
-                  - A = {A2:.4g}  
-                  - μ = {mu2:.4f} eV  
-                  - σ = {sigma2:.4f}  
-                  - Area = {area2:.4g}
 
-                - **Centroid** = {centroid:.4f} eV
-                """)
+      
 
 
             except Exception as e:
