@@ -1,10 +1,11 @@
-# xanes-fit-with-pulseref.py
+# xanes-fit-with-pulseref-plotly-gauss.py
 import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_filter1d
+from scipy.signal import savgol_filter
 import io
 import zipfile
 import plotly.graph_objects as go
@@ -40,8 +41,6 @@ def two_gauss(E, A1, mu1, sigma1, A2, mu2, sigma2):
 # -----------------------------
 # Fe-foil解析関数
 # -----------------------------
-from scipy.signal import savgol_filter
-
 SKIP_HEADER = 3
 SG_WINDOW = 31
 SG_POLY = 5
@@ -137,8 +136,8 @@ elif method=="Fe-foil fileの二階微分解析":
         fig.add_hline(
             y=0,
             yref='y2',
-            line=dict(color='red', width=1, dash='solid'),  # 太さ3の実線
-            annotation_text="y=0",  # 任意でラベル
+            line=dict(color='red', width=1, dash='solid'),
+            annotation_text="y=0",
             annotation_position="top right"
         )
         fig.update_layout(xaxis_title="Pulse", yaxis=dict(title="raw data"), yaxis2=dict(title="d2", overlaying='y', side='right'), width=800, height=400)
@@ -173,7 +172,7 @@ if pulse_ref is not None:
                 FeKa_smooth=FeKa_smooth[sort_idx]
 
                 # Baseline
-                mask_low = energy <=7110
+                mask_low = energy <=7109
                 mask_high=energy>=7114
                 E_low = energy[mask_low][np.argmax(FeKa_smooth[mask_low])]
                 I_low = FeKa_smooth[mask_low][np.argmax(FeKa_smooth[mask_low])]
@@ -191,7 +190,9 @@ if pulse_ref is not None:
                 lower=[0,7110,0,0,7112,0]
                 upper=[np.inf,7112,2,np.inf,7115,2]
                 popt,_=curve_fit(two_gauss,E_gauss,I_gauss,p0=p0_gauss,bounds=(lower,upper),maxfev=5000)
-                gauss_fit=two_gauss(E_gauss,*popt)
+                g1 = gaussian(E_gauss,popt[0],popt[1],popt[2])
+                g2 = gaussian(E_gauss,popt[3],popt[4],popt[5])
+                gauss_fit = g1 + g2
 
                 area1 = popt[0]*popt[2]*np.sqrt(2*np.pi)
                 area2 = popt[3]*popt[5]*np.sqrt(2*np.pi)
@@ -204,8 +205,6 @@ if pulse_ref is not None:
                 ax.plot(energy, FeKa_norm, 'ko', alpha=0.5, label='raw')
                 ax.plot(energy, FeKa_smooth, 'k-', alpha=0.8, label='smoothed')
                 ax.plot(energy, baseline, 'r--', linewidth=2, label='baseline')
-                g1 = gaussian(E_gauss,popt[0],popt[1],popt[2])
-                g2 = gaussian(E_gauss,popt[3],popt[4],popt[5])
                 ax.plot(E_gauss,g1+baseline[mask_gauss],'g--',linewidth=2,label='Gaussian1')
                 ax.plot(E_gauss,g2+baseline[mask_gauss],'m--',linewidth=2,label='Gaussian2')
                 ax.plot(E_gauss,gauss_fit+baseline[mask_gauss],'b-',linewidth=2,label='Total fit')
@@ -225,10 +224,10 @@ if pulse_ref is not None:
                 plt.close(fig_mpl)
                 st.download_button(f"個別Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
 
-                # Plotly
+                # -----------------------------
+                # Plotly with individual Gaussians
+                # -----------------------------
                 fig_plotly = go.Figure()
-
-                # 元データ
                 fig_plotly.add_trace(go.Scatter(
                     x=energy, y=FeKa_norm, mode='markers', name='raw', marker=dict(color='black', opacity=0.5)
                 ))
@@ -238,28 +237,17 @@ if pulse_ref is not None:
                 fig_plotly.add_trace(go.Scatter(
                     x=energy, y=baseline, mode='lines', name='baseline', line=dict(color='red', dash='dash')
                 ))
-
-                # 個別ガウス
-                g1 = gaussian(E_gauss, popt[0], popt[1], popt[2])
-                g2 = gaussian(E_gauss, popt[3], popt[4], popt[5])
                 fig_plotly.add_trace(go.Scatter(
                     x=E_gauss, y=g1 + baseline[mask_gauss], mode='lines', name='Gaussian1', line=dict(color='green', dash='dash')
                 ))
                 fig_plotly.add_trace(go.Scatter(
                     x=E_gauss, y=g2 + baseline[mask_gauss], mode='lines', name='Gaussian2', line=dict(color='magenta', dash='dash')
                 ))
-
-                # Total fit
-                gauss_fit = g1 + g2
                 fig_plotly.add_trace(go.Scatter(
                     x=E_gauss, y=gauss_fit + baseline[mask_gauss], mode='lines', name='Total fit', line=dict(color='blue')
                 ))
-
-                # Centroid
                 fig_plotly.add_vline(x=centroid, line=dict(color='blue', dash='dot'),
                                      annotation_text=f"Centroid={centroid:.2f}", annotation_position="top right")
-
-                # レイアウト
                 fig_plotly.update_layout(
                     xaxis=dict(range=[7108, 7116]),
                     yaxis=dict(range=[0, ylim_max]),
@@ -268,6 +256,7 @@ if pulse_ref is not None:
                     yaxis_title="Normalized intensity"
                 )
                 st.plotly_chart(fig_plotly, use_container_width=True)
+
             except Exception as e:
                 st.error(f"Error processing {uploaded_file.name}: {e}")
 
