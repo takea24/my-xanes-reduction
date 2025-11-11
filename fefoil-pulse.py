@@ -1,4 +1,4 @@
-# app.py
+# fefoil-pulse.py
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
@@ -89,6 +89,10 @@ if uploaded_file is not None:
         mu_s, d2 = compute_smoothed_d2(pulse, mu)
         guess_pulse, idx = find_zero_crossing(pulse, d2)
 
+        # スライダーで手動選択
+        min_p, max_p = float(pulse.min()), float(pulse.max())
+        selected_pulse = st.slider("Select pulse manually", min_p, max_p, float(guess_pulse if guess_pulse else min_p))
+
         # グラフ描画
         st.subheader("Pulse Data & Smoothed 2nd Derivative")
         fig, ax1 = plt.subplots(figsize=(8,4))
@@ -98,34 +102,27 @@ if uploaded_file is not None:
         mu_plot = mu[mask]
         mu_s_plot = mu_s[mask]
         d2_plot = d2[mask]
+
         ax1.plot(p_plot, mu_plot, label="mu (FeKa/I0)", color='black')
         ax1.plot(p_plot, mu_s_plot, label="mu_smooth", color='gray', linewidth=1)
         ax2.plot(p_plot, d2_plot, label="d2", linestyle='--')
         ax2.axhline(0, color='black', linewidth=1)
+
         if guess_pulse is not None:
             ax1.axvline(guess_pulse, color='r', linestyle='--', label=f"guess={guess_pulse:.1f}")
+
+        # 選択値を縦線で表示
+        ax1.axvline(selected_pulse, color='blue', linestyle='-', linewidth=2, label=f"selected={selected_pulse:.1f}")
+
         ax1.set_xlabel("Pulse")
         ax1.set_ylabel("mu")
         ax2.set_ylabel("d2")
         ax1.legend(loc='best')
         st.pyplot(fig)
 
-        # 推定値の利用 or 手動入力
-        chosen = guess_pulse
-        if guess_pulse is not None:
-            accept = st.radio(f"Use guessed pulse = {guess_pulse:.1f} ?", ["Yes", "No"])
-            if accept == "No":
-                # スライダーで手動入力
-                min_pulse = int(pulse.min())
-                max_pulse = int(pulse.max())
-                chosen = st.slider("Select pulse manually:", min_value=min_pulse, max_value=max_pulse,
-                                   value=int(guess_pulse), step=1)
-        st.success(f"Selected pulse: {chosen:.1f}")
-
-        # 結果を保存してダウンロード
-        out_file = save_result_txt(chosen, uploaded_file.name)
-        with open(out_file,'r') as f:
-            st.download_button("Download result txt", data=f.read(), file_name=out_file)
-
+        # 選択値を保存
+        out_file = save_result_txt(selected_pulse, uploaded_file.name)
+        st.success(f"Selected pulse saved: {selected_pulse:.1f}")
+        st.download_button("Download result txt", data=open(out_file,'r').read(), file_name=out_file)
     except Exception as e:
         st.error(f"Error: {e}")
