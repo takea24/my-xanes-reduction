@@ -135,9 +135,16 @@ elif method=="Fe-foil fileの二階微分解析":
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu[mask], mode='lines+markers', name='raw', line=dict(color='black')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu_s[mask], mode='lines', name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=d2[mask], mode='lines', name='d2', line=dict(color='green', dash='dash'), yaxis='y2'))
+        fig.add_hline(
+            y=0,
+            yref='y2',  # 第二y軸を指定
+            line=dict(color='red', width=3, dash='solid'),
+            annotation_text="y2=0",
+            annotation_position="top right"
+        )
 
         if st.session_state.pulse_ref is not None:
-            fig.add_vline(x=st.session_state.pulse_ref, line=dict(color='red', dash='dash'))
+            fig.add_vline(x=st.session_state.pulse_ref, line=dict(color='red'))
 
         fig.update_layout(
             xaxis_title="Pulse",
