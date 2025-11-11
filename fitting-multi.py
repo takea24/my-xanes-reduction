@@ -35,7 +35,7 @@ def two_gauss(E, A1, mu1, sigma1, A2, mu2, sigma2):
 # -----------------------------
 # Streamlit UI
 # -----------------------------
-st.title("XANES Pre-edge Gaussian Fitting (Fe foil) - Interactive (HTML Download)")
+st.title("XANES Pre-edge Gaussian Fitting - Interactive HTML Download")
 
 uploaded_files = st.file_uploader(
     "Select multiple .dat/.txt files for analysis",
@@ -43,9 +43,34 @@ uploaded_files = st.file_uploader(
     accept_multiple_files=True
 )
 
-pulse_ref = st.number_input("Enter reference pulse", value=581650.0)
+if uploaded_files:
+    # 基準パルス入力方法の選択
+    pulse_input_mode = st.radio(
+        "Select reference pulse input method",
+        ["Enter manually", "Use previous output value"]
+    )
 
-if uploaded_files and pulse_ref:
+    if pulse_input_mode == "Enter manually":
+        pulse_ref = st.number_input("Enter reference pulse", value=581650.0)
+    else:
+        prev_value_file = st.file_uploader(
+            "Select previous output txt file with reference pulse",
+            type=['txt'], key="prevfile"
+        )
+        pulse_ref = None
+        if prev_value_file:
+            # txtから pulse 値を読み込む
+            for line in prev_value_file:
+                try:
+                    s = line.decode('utf-8')
+                    if "pulse:" in s:
+                        pulse_ref = float(s.split(":")[1].strip())
+                        break
+                except:
+                    continue
+        if pulse_ref is None:
+            st.warning("Could not read reference pulse from file. Please enter manually.")
+            pulse_ref = st.number_input("Enter reference pulse", value=581650.0)
 
     # ZIP作成用バッファ（テキストまとめ用）
     zip_buffer = io.BytesIO()
@@ -136,12 +161,13 @@ if uploaded_files and pulse_ref:
             fig.add_trace(go.Scatter(x=E_gauss, y=gauss_fit + baseline[mask_gauss], mode='lines', name='Total fit'))
             fig.add_trace(go.Scatter(x=[centroid, centroid], y=[0, max(Fe_Ka_smooth)], mode='lines',
                                      name='Centroid', line=dict(dash='dot')))
+
             fig.update_layout(
                 title=f"{basename} Fitting",
                 xaxis_title="Energy (eV)",
                 yaxis_title="Normalized intensity",
                 xaxis=dict(range=[7108, 7116]),
-                yaxis=dict(range=[0, np.ceil(max(Fe_Ka_smooth)/0.01)*0.01])
+                yaxis=dict(autorange=True)  # 自動調整
             )
 
             st.plotly_chart(fig, use_container_width=True)
@@ -149,11 +175,13 @@ if uploaded_files and pulse_ref:
             # -----------------------------
             # HTMLダウンロード
             # -----------------------------
-            html_buffer = io.StringIO()
-            fig.write_html(html_buffer)
-            html_buffer.seek(0)
-            st.download_button(f"Download {basename} graph (HTML)", html_buffer,
-                               file_name=f"{basename}_fitting.html")
+            html_str = fig.to_html()
+            st.download_button(
+                f"Download {basename} graph (HTML)",
+                data=html_str,
+                file_name=f"{basename}_fitting.html",
+                mime="text/html"
+            )
 
     # -----------------------------
     # ZIPダウンロード（テキストまとめ）
