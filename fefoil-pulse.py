@@ -104,14 +104,15 @@ if uploaded_file is not None:
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # ---------- スライダー（グラフ横軸と同じ範囲） ----------
+        # スライダー（グラフ横軸と同じ範囲、型を揃える）
         chosen = st.slider(
             "Adjust pulse",
-            min_value=min_p,
-            max_value=max_p,
-            value=initial_pulse,
+            min_value=int(min_p),   # int にキャスト
+            max_value=int(max_p),   # int にキャスト
+            value=int(initial_pulse) if initial_pulse is not None else int(min_p),
             step=1
         )
+
 
         st.success(f"Selected pulse: {chosen:.1f}")
 
