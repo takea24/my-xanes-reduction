@@ -103,8 +103,6 @@ st.subheader("Step 1: Pulse Reference Selection (Fe-foil)")
 method = st.radio("Choose pulse reference method:", ["Input manually", "Analyze Fe-foil file"])
 pulse_ref = None
 
-search_min = st.number_input("Fe-foil analysis: minimum pulse to analyze (SEARCH_MIN)", value=DEFAULT_SEARCH_MIN, step=1)
-
 if method=="Input manually":
     pulse_ref = st.number_input("Enter pulse reference", value=36000.0, step=1.0)
     if st.button("Confirm pulse reference"):
@@ -112,6 +110,8 @@ if method=="Input manually":
 
 elif method=="Analyze Fe-foil file":
     uploaded_file = st.file_uploader("Select Fe foil .dat file", type=['dat','txt'])
+    search_min = st.number_input("Fe-foil analysis: minimum pulse to analyze (SEARCH_MIN)", value=DEFAULT_SEARCH_MIN, step=1)
+
     if uploaded_file is not None:
         pulse, mu = load_xanes_file(uploaded_file)
         mu_s, d2 = compute_smoothed_d2(pulse, mu)
@@ -221,8 +221,8 @@ if pulse_ref is not None:
                 ax.plot(energy, baseline, 'r--', linewidth=2, label='baseline')
                 g1 = gaussian(E_gauss,popt[0],popt[1],popt[2])
                 g2 = gaussian(E_gauss,popt[3],popt[4],popt[5])
-                ax.plot(E_gauss,g1+baseline[mask_gauss],'g--',linewidth=2,label='Gaussian1')
-                ax.plot(E_gauss,g2+baseline[mask_gauss],'m--',linewidth=2,label='Gaussian2')
+                ax.plot(E_gauss,g1+baseline[mask_gauss],'g--',linewidth=3,label='Gaussian1')
+                ax.plot(E_gauss,g2+baseline[mask_gauss],'m--',linewidth=3,label='Gaussian2')
                 ax.plot(E_gauss,gauss_fit+baseline[mask_gauss],'b-',linewidth=2,label='Total fit')
                 ax.axvline(centroid,color='blue',linestyle=':',label=f'Centroid={centroid:.2f}')
                 mask_ylim=(energy>=7114)&(energy<=7116)
@@ -246,8 +246,8 @@ if pulse_ref is not None:
                 fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_smooth,mode='lines',name='smoothed',line=dict(color='gray')))
                 fig_plotly.add_trace(go.Scatter(x=energy,y=baseline,mode='lines',name='baseline',line=dict(color='red',dash='dash')))
                 # Gaussians
-                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g1+baseline[mask_gauss],mode='lines',name='Gaussian1',line=dict(color='green',dash='dash')))
-                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g2+baseline[mask_gauss],mode='lines',name='Gaussian2',line=dict(color='magenta',dash='dash')))
+                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g1+baseline[mask_gauss],mode='lines',name='Gaussian1',line=dict(color='green',dash='dash', width=3)))
+                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g2+baseline[mask_gauss],mode='lines',name='Gaussian2',line=dict(color='magenta',dash='dash', width=3)))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss,y=gauss_fit+baseline[mask_gauss],mode='lines',name='Total fit',line=dict(color='blue')))
                 # パルスリファレンス表示など不要
                 fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
