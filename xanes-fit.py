@@ -316,10 +316,11 @@ if st.session_state.step1_done:
         if all_params:
             df_all = pd.DataFrame(all_params)
             st.subheader("Summary of all fittings")
-            st.dataframe(df_all.style.format("{:.5g}"))
+            st.dataframe(df_all)  # style.format を外す
 
             # CSV/TXT保存用
             csv_buffer = io.StringIO()
             df_all.to_csv(csv_buffer, index=False)
             csv_buffer.seek(0)
             st.download_button("Download all fitting parameters (CSV/TXT)", csv_buffer, file_name="all_fitting_parameters.csv")
+
