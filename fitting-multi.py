@@ -1,12 +1,13 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_filter1d
 import io
 import zipfile
 import os
+import plotly.graph_objects as go
 
 # -----------------------------
 # 定数
@@ -35,7 +36,7 @@ def two_gauss(E, A1, mu1, sigma1, A2, mu2, sigma2):
 # -----------------------------
 # Streamlit UI
 # -----------------------------
-st.title("XANES Pre-edge Gaussian Fitting - Interactive HTML Download")
+st.title("XANES Pre-edge Gaussian Fitting - Interactive + PNG Output")
 
 uploaded_files = st.file_uploader(
     "Select multiple .dat/.txt files for analysis",
@@ -59,7 +60,6 @@ if uploaded_files:
         )
         pulse_ref = None
         if prev_value_file:
-            # txtから pulse 値を読み込む
             for line in prev_value_file:
                 try:
                     s = line.decode('utf-8')
@@ -78,7 +78,6 @@ if uploaded_files:
 
         for uploaded_file in uploaded_files:
             basename = os.path.splitext(uploaded_file.name)[0]
-
             st.subheader(f"Processing: {basename}")
 
             # -----------------------------
@@ -92,7 +91,6 @@ if uploaded_files:
             energy = pulse_to_energy(pulse, pulse_ref)
             Fe_Ka_smooth = gaussian_filter1d(Fe_Ka_norm, sigma=1)
 
-            # 昇順ソート
             sort_idx = np.argsort(energy)
             energy = energy[sort_idx]
             Fe_Ka_norm = Fe_Ka_norm[sort_idx]
@@ -147,7 +145,7 @@ if uploaded_files:
             zipf.writestr(txt_filename, txt_content)
 
             # -----------------------------
-            # Plotlyでインタラクティブ表示
+            # Plotly インタラクティブ表示
             # -----------------------------
             gauss1 = gaussian(E_gauss, popt_gauss[0], popt_gauss[1], popt_gauss[2])
             gauss2 = gaussian(E_gauss, popt_gauss[3], popt_gauss[4], popt_gauss[5])
@@ -161,27 +159,41 @@ if uploaded_files:
             fig.add_trace(go.Scatter(x=E_gauss, y=gauss_fit + baseline[mask_gauss], mode='lines', name='Total fit'))
             fig.add_trace(go.Scatter(x=[centroid, centroid], y=[0, max(Fe_Ka_smooth)], mode='lines',
                                      name='Centroid', line=dict(dash='dot')))
-
             fig.update_layout(
                 title=f"{basename} Fitting",
                 xaxis_title="Energy (eV)",
                 yaxis_title="Normalized intensity",
                 xaxis=dict(range=[7108, 7116]),
-                yaxis=dict(autorange=True)  # 自動調整
+                yaxis=dict(autorange=True)
             )
-
             st.plotly_chart(fig, use_container_width=True)
 
             # -----------------------------
-            # HTMLダウンロード
+            # PNG 保存（matplotlib）
             # -----------------------------
-            html_str = fig.to_html()
-            st.download_button(
-                f"Download {basename} graph (HTML)",
-                data=html_str,
-                file_name=f"{basename}_fitting.html",
-                mime="text/html"
-            )
+            fig_mpl, ax = plt.subplots(figsize=(10,6), constrained_layout=True)
+            ax.plot(energy, Fe_Ka_norm, 'ko', alpha=0.5, label='Raw')
+            ax.plot(energy, Fe_Ka_smooth, 'k-', alpha=0.8, label='Smoothed')
+            ax.plot(energy, baseline, 'r--', linewidth=2, label='Baseline')
+            ax.plot(E_gauss, gauss1 + baseline[mask_gauss], 'g--', linewidth=2, label='Gaussian 1')
+            ax.plot(E_gauss, gauss2 + baseline[mask_gauss], 'm--', linewidth=2, label='Gaussian 2')
+            ax.plot(E_gauss, gauss_fit + baseline[mask_gauss], 'b-', linewidth=2, label='Total fit')
+            ax.axvline(centroid, color='blue', linestyle=':', label=f'Centroid={centroid:.2f} eV')
+
+            # 縦軸自動調整（以前のロジック）
+            mask_ylim = (energy >= 7114) & (energy <= 7116)
+            ylim_max = np.ceil(Fe_Ka_smooth[mask_ylim].max() / 0.01) * 0.01
+            ax.set_ylim(0, ylim_max)
+            ax.set_xlim(7108, 7116)
+            ax.set_xlabel("Energy (eV)")
+            ax.set_ylabel("Normalized intensity")
+            ax.legend()
+            png_buffer = io.BytesIO()
+            fig_mpl.savefig(png_buffer, dpi=300, format='png')
+            png_buffer.seek(0)
+            st.download_button(f"Download {basename} graph (PNG)", data=png_buffer,
+                               file_name=f"{basename}_fitting.png", mime="image/png")
+            plt.close(fig_mpl)
 
     # -----------------------------
     # ZIPダウンロード（テキストまとめ）
