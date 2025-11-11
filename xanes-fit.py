@@ -214,6 +214,30 @@ if pulse_ref is not None:
                 area2 = popt[3]*popt[5]*np.sqrt(2*np.pi)
                 centroid = (popt[1]*area1 + popt[4]*area2)/(area1+area2)
 
+                # popt = [A1, mu1, sigma1, A2, mu2, sigma2]
+
+                A1, mu1, sigma1, A2, mu2, sigma2 = popt
+                area1 = A1 * sigma1 * np.sqrt(2*np.pi)
+                area2 = A2 * sigma2 * np.sqrt(2*np.pi)
+                centroid = (mu1 * area1 + mu2 * area2) / (area1 + area2)
+
+                st.markdown(f"""
+                **Gaussian Fit Parameters — {uploaded_file.name}**
+                - **Gaussian 1**  
+                  - A = {A1:.4g}  
+                  - μ = {mu1:.4f} eV  
+                  - σ = {sigma1:.4f}  
+                  - Area = {area1:.4g}
+
+                - **Gaussian 2**  
+                  - A = {A2:.4g}  
+                  - μ = {mu2:.4f} eV  
+                  - σ = {sigma2:.4f}  
+                  - Area = {area2:.4g}
+
+                - **Centroid** = {centroid:.4f} eV
+                """)
+
                 # Matplotlib
                 fig_mpl, ax = plt.subplots(figsize=(10,6), constrained_layout=True)
                 ax.plot(energy, FeKa_norm, 'ko', alpha=0.5, label='raw')
