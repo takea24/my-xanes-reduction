@@ -223,7 +223,7 @@ if pulse_ref is not None:
                 g2 = gaussian(E_gauss,popt[3],popt[4],popt[5])
                 ax.plot(E_gauss,g1+baseline[mask_gauss],'g--',linewidth=3,label='Gaussian1')
                 ax.plot(E_gauss,g2+baseline[mask_gauss],'m--',linewidth=3,label='Gaussian2')
-                ax.plot(E_gauss,gauss_fit+baseline[mask_gauss],'b-',linewidth=2,label='Total fit')
+                ax.plot(E_gauss,gauss_fit+baseline[mask_gauss],'b-',linewidth=1,label='Total fit')
                 ax.axvline(centroid,color='blue',linestyle=':',label=f'Centroid={centroid:.2f}')
                 mask_ylim=(energy>=7114)&(energy<=7116)
                 ylim_max=np.ceil(FeKa_smooth[mask_ylim].max()/0.01)*0.01
@@ -248,7 +248,7 @@ if pulse_ref is not None:
                 # Gaussians
                 fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g1+baseline[mask_gauss],mode='lines',name='Gaussian1',line=dict(color='green',dash='dash', width=3)))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g2+baseline[mask_gauss],mode='lines',name='Gaussian2',line=dict(color='magenta',dash='dash', width=3)))
-                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=gauss_fit+baseline[mask_gauss],mode='lines',name='Total fit',line=dict(color='blue')))
+                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=gauss_fit+baseline[mask_gauss],mode='lines',name='Total fit',line=dict(color='blue', width=1)))
                 # パルスリファレンス表示など不要
                 fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
                 fig_plotly.update_layout(
