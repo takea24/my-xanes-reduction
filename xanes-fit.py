@@ -107,8 +107,8 @@ pulse_ref = None
 
 if method=="Input manually パルスの手動入力":
     pulse_ref = st.number_input("Enter pulse reference", value=581700.0, step=1.0)
-    if st.button("Confirm pulse reference"):
-        st.success(f"Confirmed pulse reference: {pulse_ref}")
+    if st.button("Confirm pulse reference (確定したら押す）"):
+        st.success(f"Confirmed pulse reference (確定したら押す）: {pulse_ref}")
 
 elif method=="Fe-foil fileの二階微分解析":
     uploaded_file = st.file_uploader("Select Fe foil .dat file", type=['dat','txt'])
@@ -121,7 +121,7 @@ elif method=="Fe-foil fileの二階微分解析":
 
         col1, col2 = st.columns([3,1])
         with col1:
-            chosen_slider = st.slider("Adjust pulse", min_value=min_p, max_value=max_p, value=initial_pulse, step=1)
+            chosen_slider = st.slider("Adjust pulse（必要があれば）", min_value=min_p, max_value=max_p, value=initial_pulse, step=1)
         with col2:
             chosen_input = st.number_input("Or enter manually", min_value=min_p, max_value=max_p, value=chosen_slider, step=1)
 
