@@ -181,7 +181,8 @@ if st.session_state.step1_done:
         bg_high = st.number_input("Upper background limit (eV, ≥)", value=7114.0, step=0.01)
 
         png_buffers = []
-
+        all_params = []
+        
         for uploaded_file in uploaded_files:
             try:
                 data=pd.read_csv(uploaded_file, skiprows=3, header=None)
@@ -283,6 +284,19 @@ if st.session_state.step1_done:
                 st.dataframe(df.style.format("{:.5g}"))
                 st.write(f"**Centroid** = {centroid:.4f} eV")
                       
+                # 追加：全体パラメータに保存
+                all_params.append({
+                    "File": uploaded_file.name,
+                    "Centroid": centroid,
+                    "Gaussian1_A": A1,
+                    "Gaussian1_mu": mu1,
+                    "Gaussian1_sigma": sigma1,
+                    "Gaussian1_FWHM": FWHM1,
+                    "Gaussian2_A": A2,
+                    "Gaussian2_mu": mu2,
+                    "Gaussian2_sigma": sigma2,
+                    "Gaussian2_FWHM": FWHM2
+                })
 
 
             except Exception as e:
@@ -296,3 +310,15 @@ if st.session_state.step1_done:
                     zf.writestr(f"{name}_fitting.png", buf.getvalue())
             zip_buffer.seek(0)
             st.download_button("Download all PNGs as ZIP", zip_buffer, file_name="all_fittings.zip")
+
+        # ループ終了後
+        if all_params:
+            df_all = pd.DataFrame(all_params)
+            st.subheader("Summary of all fittings")
+            st.dataframe(df_all.style.format("{:.5g}"))
+
+            # CSV/TXT保存用
+            csv_buffer = io.StringIO()
+            df_all.to_csv(csv_buffer, index=False)
+            csv_buffer.seek(0)
+            st.download_button("Download all fitting parameters (CSV/TXT)", csv_buffer, file_name="all_fitting_parameters.csv")
