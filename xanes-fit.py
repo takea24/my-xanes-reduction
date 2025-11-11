@@ -1,4 +1,4 @@
-# xanes_fit_streamlit_baseline_gauss.py
+# xanes_fit_streamlit_fefoil_slider.py
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -13,11 +13,11 @@ import plotly.graph_objects as go
 # -----------------------------
 # 定数
 # -----------------------------
-HC = 12398.419      # eV*Å
-D_SI111 = 3.1356    # Å
+HC = 12398.419
+D_SI111 = 3.1356
 PULSES_PER_DEG = 36000
 DEG2RAD = np.pi / 180.0
-E0_FE = 7111.08     # Fe foil reference
+E0_FE = 7111.08
 
 # -----------------------------
 # Pulse → Energy
@@ -105,12 +105,18 @@ method = st.radio("Fe-foilの第一変曲点位置:", ["手動入力", "Fe-foil 
 if "pulse_ref" not in st.session_state:
     st.session_state.pulse_ref = None
 
+# -----------------------------
+# 手動入力
+# -----------------------------
 if method=="手動入力":
     pulse_input = st.number_input("Enter pulse reference", value=581700.0, step=1.0)
     if st.button("Confirm pulse reference"):
         st.session_state.pulse_ref = pulse_input
         st.success(f"Confirmed: {pulse_input}")
 
+# -----------------------------
+# Fe-foilファイル解析
+# -----------------------------
 elif method=="Fe-foil fileの二階微分解析":
     uploaded_file = st.file_uploader("Select Fe foil .dat file", type=['dat','txt'])
     if uploaded_file is not None:
@@ -126,25 +132,31 @@ elif method=="Fe-foil fileの二階微分解析":
         with col2:
             input_val = st.number_input("Or enter manually", min_value=min_p, max_value=max_p, value=slider_val, step=1)
 
+        # 確定ボタン
         if st.button("Confirm pulse reference"):
             st.session_state.pulse_ref = input_val
             st.success(f"Confirmed pulse reference: {input_val}")
 
+        # Plotly 図をスライダー連動で再描画
+        chosen_pulse = input_val
         mask = pulse >= SEARCH_MIN
         fig=go.Figure()
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu[mask], mode='lines+markers', name='raw', line=dict(color='black')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu_s[mask], mode='lines', name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=d2[mask], mode='lines', name='d2', line=dict(color='green', dash='dash'), yaxis='y2'))
+
+        # 確定済みパルス参照
+        if st.session_state.pulse_ref is not None:
+            fig.add_vline(x=st.session_state.pulse_ref, line=dict(color='red', dash='dash'))
+
+        # y2=0 水平線
         fig.add_hline(
             y=0,
-            yref='y2',  # 第二y軸を指定
+            yref='y2',
             line=dict(color='red', width=3, dash='solid'),
             annotation_text="y2=0",
             annotation_position="top right"
         )
-
-        if st.session_state.pulse_ref is not None:
-            fig.add_vline(x=st.session_state.pulse_ref, line=dict(color='red'))
 
         fig.update_layout(
             xaxis_title="Pulse",
@@ -152,16 +164,16 @@ elif method=="Fe-foil fileの二階微分解析":
             yaxis2=dict(title="d2", overlaying='y', side='right'),
             width=800, height=400
         )
+
         st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------------
-# Step 2: Multiple File Fitting
+# Step2: Multiple File Fitting
 # -----------------------------
 if st.session_state.pulse_ref is not None:
     st.subheader("Step 2: Multiple File Fitting")
     uploaded_files = st.file_uploader("Select dat files for fitting", accept_multiple_files=True, type=['dat','txt'])
 
-    # バックグラウンド範囲設定
     e_low_val = st.number_input("Baseline low energy (<=)", value=7110.0, step=0.1)
     e_high_val = st.number_input("Baseline high energy (>=)", value=7114.0, step=0.1)
 
