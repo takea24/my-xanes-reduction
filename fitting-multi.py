@@ -1,8 +1,7 @@
-# app_gauss.py
 import streamlit as st
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_filter1d
 import io
@@ -36,25 +35,30 @@ def two_gauss(E, A1, mu1, sigma1, A2, mu2, sigma2):
 # -----------------------------
 # Streamlit UI
 # -----------------------------
-st.title("XANES Pre-edge Gaussian Fitting (Fe foil)")
+st.title("XANES Pre-edge Gaussian Fitting (Fe foil) - Interactive")
 
 uploaded_files = st.file_uploader(
-    "解析するdatファイルを複数選択",
+    "Select multiple .dat/.txt files for analysis",
     type=['dat', 'txt'],
     accept_multiple_files=True
 )
 
-pulse_ref = st.number_input("基準パルスを入力", value=581650.0)
+pulse_ref = st.number_input("Enter reference pulse", value=581650.0)
 
 if uploaded_files and pulse_ref:
 
+    # ZIP作成用バッファ
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
 
         for uploaded_file in uploaded_files:
             basename = os.path.splitext(uploaded_file.name)[0]
 
+            st.subheader(f"Processing: {basename}")
+
+            # -----------------------------
             # データ読み込み
+            # -----------------------------
             data = pd.read_csv(uploaded_file, skiprows=3, header=None)
             pulse = data[0].values
             I0 = data[1].values
@@ -69,7 +73,9 @@ if uploaded_files and pulse_ref:
             Fe_Ka_norm = Fe_Ka_norm[sort_idx]
             Fe_Ka_smooth = Fe_Ka_smooth[sort_idx]
 
+            # -----------------------------
             # 自動直線ベースライン
+            # -----------------------------
             mask_low = energy <= 7109
             mask_high = energy >= 7114
             E_low = energy[mask_low][np.argmax(Fe_Ka_smooth[mask_low])]
@@ -80,7 +86,9 @@ if uploaded_files and pulse_ref:
             c_lin = I_low - m_lin * E_low
             baseline = m_lin * energy + c_lin
 
+            # -----------------------------
             # プレエッジ2ガウスフィット（7110-7115 eV）
+            # -----------------------------
             mask_gauss = (energy >= 7110) & (energy <= 7115)
             E_gauss = energy[mask_gauss]
             I_gauss = Fe_Ka_smooth[mask_gauss] - baseline[mask_gauss]
@@ -98,7 +106,9 @@ if uploaded_files and pulse_ref:
             area2 = popt_gauss[3] * popt_gauss[5] * np.sqrt(2*np.pi)
             centroid = (popt_gauss[1]*area1 + popt_gauss[4]*area2) / (area1 + area2)
 
+            # -----------------------------
             # テキスト出力
+            # -----------------------------
             txt_lines = []
             txt_lines.append("Linear baseline parameters (auto max/min):")
             txt_lines.append(f"slope = {m_lin:.6f}, intercept = {c_lin:.6f}")
@@ -111,33 +121,41 @@ if uploaded_files and pulse_ref:
             txt_filename = f"{basename}_fitting.txt"
             zipf.writestr(txt_filename, txt_content)
 
-            # グラフ出力
-            fig, ax = plt.subplots(figsize=(10,6), constrained_layout=True)
-            ax.plot(energy, Fe_Ka_norm, 'ko', alpha=0.5, label=f'{basename} raw data')
-            ax.plot(energy, Fe_Ka_smooth, 'k-', alpha=0.8, label='smoothed data')
-            ax.plot(energy, baseline, 'r--', linewidth=2, label='auto linear baseline')
+            # -----------------------------
+            # Plotlyでインタラクティブ表示
+            # -----------------------------
             gauss1 = gaussian(E_gauss, popt_gauss[0], popt_gauss[1], popt_gauss[2])
             gauss2 = gaussian(E_gauss, popt_gauss[3], popt_gauss[4], popt_gauss[5])
-            ax.plot(E_gauss, gauss1 + baseline[mask_gauss], 'g--', linewidth=2, label='Gaussian 1')
-            ax.plot(E_gauss, gauss2 + baseline[mask_gauss], 'm--', linewidth=2, label='Gaussian 2')
-            ax.plot(E_gauss, gauss_fit + baseline[mask_gauss], 'b-', linewidth=2, label='Total fit')
-            ax.axvline(centroid, color='blue', linestyle=':', label=f'Centroid = {centroid:.2f} eV')
-            ax.set_xlabel("Energy (eV)")
-            ax.set_ylabel("Normalized intensity")
-            ax.set_xlim(7108, 7116)
-            mask_ylim = (energy >= 7114) & (energy <= 7116)
-            ylim_max = np.ceil(Fe_Ka_smooth[mask_ylim].max() / 0.01) * 0.01
-            ax.set_ylim(0, ylim_max)
-            ax.legend()
 
-            # PNG保存を BytesIO に書き込み
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=energy, y=Fe_Ka_norm, mode='markers', name='Raw'))
+            fig.add_trace(go.Scatter(x=energy, y=Fe_Ka_smooth, mode='lines', name='Smoothed'))
+            fig.add_trace(go.Scatter(x=energy, y=baseline, mode='lines', name='Baseline', line=dict(dash='dash')))
+            fig.add_trace(go.Scatter(x=E_gauss, y=gauss1 + baseline[mask_gauss], mode='lines', name='Gaussian 1'))
+            fig.add_trace(go.Scatter(x=E_gauss, y=gauss2 + baseline[mask_gauss], mode='lines', name='Gaussian 2'))
+            fig.add_trace(go.Scatter(x=E_gauss, y=gauss_fit + baseline[mask_gauss], mode='lines', name='Total fit'))
+            fig.add_trace(go.Scatter(x=[centroid, centroid], y=[0, max(Fe_Ka_smooth)], mode='lines',
+                                     name='Centroid', line=dict(dash='dot')))
+            fig.update_layout(
+                title=f"{basename} Fitting",
+                xaxis_title="Energy (eV)",
+                yaxis_title="Normalized intensity",
+                xaxis=dict(range=[7108, 7116]),
+                yaxis=dict(range=[0, np.ceil(max(Fe_Ka_smooth)/0.01)*0.01])
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            # -----------------------------
+            # 個別PNGダウンロード
+            # -----------------------------
             png_buffer = io.BytesIO()
-            fig.savefig(png_buffer, format='png', dpi=300)
-            plt.close(fig)
+            fig.write_image(png_buffer, format='png', scale=2)
             png_buffer.seek(0)
-            png_filename = f"{basename}_fitting.png"
-            zipf.writestr(png_filename, png_buffer.read())
+            st.download_button(f"Download {basename} graph", png_buffer, file_name=f"{basename}_fitting.png")
 
-    # ZIPダウンロード
+    # -----------------------------
+    # ZIPダウンロード（テキストまとめ）
+    # -----------------------------
     zip_buffer.seek(0)
     st.download_button("Download all results (txt + png)", data=zip_buffer, file_name="results.zip")
