@@ -98,19 +98,19 @@ def find_zero_crossing(p, d2):
 # -----------------------------
 # Streamlit UI: Pulse Reference
 # -----------------------------
-st.title("XANES Multiple File Fitting with Pulse Reference 解析")
+st.title("XANES pre-edge 解析")
 
-st.subheader("Step 1: Pulse Reference Selection")
-method = st.radio("Choose pulse reference method:", ["Input manually", "Analyze Fe-foil file"])
+st.subheader("Step 1: Pulse Reference Selection パルス-エネルギー変換")
+method = st.radio("Choose pulse reference method:", ["Input manually パルスの手動入力", "Fe-foil fileの二階微分解析"])
 
 pulse_ref = None
 
-if method=="Input manually":
-    pulse_ref = st.number_input("Enter pulse reference", value=36000.0, step=1.0)
+if method=="Input manually パルスの手動入力":
+    pulse_ref = st.number_input("Enter pulse reference", value=581700.0, step=1.0)
     if st.button("Confirm pulse reference"):
         st.success(f"Confirmed pulse reference: {pulse_ref}")
 
-elif method=="Analyze Fe-foil file":
+elif method=="Fe-foil fileの二階微分解析":
     uploaded_file = st.file_uploader("Select Fe foil .dat file", type=['dat','txt'])
     if uploaded_file is not None:
         pulse, mu = load_xanes_file(uploaded_file)
