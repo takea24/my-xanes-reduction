@@ -134,8 +134,12 @@ elif method=="Fe-foil fileの二階微分解析":
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu_s[mask], mode='lines', name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=d2[mask], mode='lines', name='d2', line=dict(color='green',dash='dash'), yaxis='y2'))
         fig.add_vline(x=pulse_ref, line=dict(color='yellow', dash='dash'))
-        fig.add_vline(y=0, line=dict(color='gray', dash='dash'))
-
+        fig.add_hline(
+            y=0, 
+            line=dict(color='black', width=3, dash='solid'),  # 太さ3の実線
+            annotation_text="y=0",  # 任意でラベル
+            annotation_position="top right"
+        )
         fig.update_layout(xaxis_title="Pulse", yaxis=dict(title="raw data"), yaxis2=dict(title="d2", overlaying='y', side='right'), width=800, height=400)
         st.plotly_chart(fig, use_container_width=True)
 
