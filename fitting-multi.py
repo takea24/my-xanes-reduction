@@ -163,15 +163,14 @@ if uploaded_files:
 
         except Exception as e:
             st.error(f"Error processing {uploaded_file.name}: {e}")
-
     # -----------------------------
-    # 一括ZIPダウンロード
+    # 一括PNGダウンロード（ワンクリック）
     # -----------------------------
-    if st.button("Download all PNGs as ZIP"):
+    if png_buffers:  # ファイルがある場合のみ
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w") as zf:
             for name, buf in png_buffers:
                 zf.writestr(f"{name}_fitting.png", buf.getvalue())
         zip_buffer.seek(0)
-        st.download_button("Download ZIP", zip_buffer, file_name="all_fittings.zip")
+        st.download_button("Download all PNGs as ZIP", zip_buffer, file_name="all_fittings.zip")
 
