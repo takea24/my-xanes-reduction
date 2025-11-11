@@ -262,21 +262,20 @@ if pulse_ref is not None:
 
                 # popt = [A1, mu1, sigma1, A2, mu2, sigma2]
                 A1, mu1, sigma1, A2, mu2, sigma2 = popt
+                FWHM1 = 2.35482 * sigma1
+                FWHM2 = 2.35482 * sigma2
 
                 df = pd.DataFrame(
                     {
-                        "Gaussian 1": [A1, mu1, sigma1, area1],
-                        "Gaussian 2": [A2, mu2, sigma2, area2],
+                        "Gaussian 1": [A1, mu1, sigma1, FWHM1, area1],
+                        "Gaussian 2": [A2, mu2, sigma2, FWHM2, area2],
                     },
-                    index=["A", "μ (eV)", "σ", "Area"]
+                    index=["Height A", "Center μ (eV)", "σ", "FWHM", "Area"]
                 )
 
-                st.write(f"### Gaussian Fit Parameters — {uploaded_file.name}")
                 st.dataframe(df.style.format("{:.5g}"))
-
                 st.write(f"**Centroid** = {centroid:.4f} eV")
-
-      
+                      
 
 
             except Exception as e:
