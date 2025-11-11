@@ -121,7 +121,7 @@ elif method=="Fe-foil fileの二階微分解析":
 
         col1, col2 = st.columns([3,1])
         with col1:
-            chosen_slider = st.slider("Adjust pulse（d2=0となるパルス）", min_value=min_p, max_value=max_p, value=initial_pulse, step=1)
+            chosen_slider = st.slider("Adjust pulse（d2=0となるパルス位置）", min_value=min_p, max_value=max_p, value=initial_pulse, step=1)
         with col2:
             chosen_input = st.number_input("Or enter manually", min_value=min_p, max_value=max_p, value=chosen_slider, step=1)
 
@@ -137,7 +137,7 @@ elif method=="Fe-foil fileの二階微分解析":
         fig.add_hline(
             y=0,
             yref='y2',
-            line=dict(color='black', width=3, dash='solid'),  # 太さ3の実線
+            line=dict(color='red', width=3, dash='solid'),  # 太さ3の実線
             annotation_text="y=0",  # 任意でラベル
             annotation_position="top right"
         )
