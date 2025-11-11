@@ -108,7 +108,7 @@ pulse_ref = None
 if method=="Input manually パルスの手動入力":
     pulse_ref = st.number_input("Enter pulse reference", value=581700.0, step=1.0)
     if st.button("Confirm pulse reference (確定したら押す）"):
-        st.success(f"Confirmed pulse reference (確定したら押す）: {pulse_ref}")
+        st.success(f"Confirmed pulse reference (確定値）: {pulse_ref}")
 
 elif method=="Fe-foil fileの二階微分解析":
     uploaded_file = st.file_uploader("Select Fe foil .dat file", type=['dat','txt'])
@@ -121,7 +121,7 @@ elif method=="Fe-foil fileの二階微分解析":
 
         col1, col2 = st.columns([3,1])
         with col1:
-            chosen_slider = st.slider("Adjust pulse（必要があれば）", min_value=min_p, max_value=max_p, value=initial_pulse, step=1)
+            chosen_slider = st.slider("Adjust pulse（d2=0となるパルス）", min_value=min_p, max_value=max_p, value=initial_pulse, step=1)
         with col2:
             chosen_input = st.number_input("Or enter manually", min_value=min_p, max_value=max_p, value=chosen_slider, step=1)
 
@@ -130,15 +130,15 @@ elif method=="Fe-foil fileの二階微分解析":
         # Plotlyで確認
         mask=pulse>=SEARCH_MIN
         fig=go.Figure()
-        fig.add_trace(go.Scatter(x=pulse[mask], y=mu[mask], mode='lines+markers', name='mu', line=dict(color='black')))
+        fig.add_trace(go.Scatter(x=pulse[mask], y=mu[mask], mode='lines+markers', name='raw data', line=dict(color='black')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu_s[mask], mode='lines', name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=d2[mask], mode='lines', name='d2', line=dict(dash='dash'), yaxis='y2'))
-        fig.add_vline(x=pulse_ref, line=dict(color='red', dash='dash'))
-        fig.update_layout(xaxis_title="Pulse", yaxis=dict(title="mu"), yaxis2=dict(title="d2", overlaying='y', side='right'), width=800, height=400)
+        fig.add_vline(x=pulse_ref, line=dict(color='yellow', dash='dash'))
+        fig.update_layout(xaxis_title="Pulse", yaxis=dict(title="raw data"), yaxis2=dict(title="d2", overlaying='y', side='right'), width=800, height=400)
         st.plotly_chart(fig, use_container_width=True)
 
         if st.button("Confirm pulse reference (確定したら押す）"):
-            st.success(f"Confirmed pulse reference (確定したら押す）: {pulse_ref}")
+            st.success(f"Confirmed pulse reference (確定値）: {pulse_ref}")
 
 # -----------------------------
 # Step 2: XANES Multiple File Fitting
