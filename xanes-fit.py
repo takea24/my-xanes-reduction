@@ -104,13 +104,13 @@ method = st.radio("Choose pulse reference method:", ["Input manually", "Analyze 
 pulse_ref = None
 
 if method=="Input manually":
-    pulse_ref = st.number_input("Enter pulse reference", value=36000.0, step=1.0)
+    pulse_ref = st.number_input("鉄の第一変曲点のパルス位置", value=581700.0, step=1.0)
     if st.button("Confirm pulse reference"):
         st.success(f"Confirmed pulse reference: {pulse_ref}")
 
 elif method=="Analyze Fe-foil file":
     uploaded_file = st.file_uploader("Select Fe foil .dat file", type=['dat','txt'])
-    search_min = st.number_input("Fe-foil analysis: minimum pulse to analyze (SEARCH_MIN)", value=DEFAULT_SEARCH_MIN, step=1)
+    search_min = st.number_input("第一変曲点探索範囲指定（これより大きい値で変曲点を探索）", value=DEFAULT_SEARCH_MIN, step=1)
 
     if uploaded_file is not None:
         pulse, mu = load_xanes_file(uploaded_file)
