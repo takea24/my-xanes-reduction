@@ -319,8 +319,11 @@ if st.session_state.step1_done:
             st.dataframe(df_all)  # style.format を外す
 
             # CSV/TXT保存用
-            csv_buffer = io.StringIO()
-            df_all.to_csv(csv_buffer, index=False)
-            csv_buffer.seek(0)
-            st.download_button("Download all fitting parameters (CSV/TXT)", csv_buffer, file_name="all_fitting_parameters.csv")
-
+            csv_str = csv_buffer.getvalue()
+            st.download_button(
+                "Download all fitting parameters (CSV/TXT)",
+                data=csv_str,
+                file_name="all_fitting_parameters.csv",
+                mime="text/csv"
+                )
+             
