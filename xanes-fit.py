@@ -44,7 +44,7 @@ def two_gauss(E, A1, mu1, sigma1, A2, mu2, sigma2):
 SKIP_HEADER = 3
 SG_WINDOW = 31
 SG_POLY = 5
-SEARCH_MIN = 581650
+DEFAULT_SEARCH_MIN = 581650
 
 def load_xanes_file(file):
     pulse_list=[]
@@ -82,8 +82,8 @@ def compute_smoothed_d2(pulse, mu):
     d2 = np.gradient(d1, pulse)
     return mu_s, d2
 
-def find_zero_crossing(p, d2):
-    mask = p >= SEARCH_MIN
+def find_zero_crossing(p, d2, search_min):
+    mask = p >= search_min
     idxs = np.where(mask)[0]
     if len(idxs)<2: return None
     for i0 in range(idxs[0], len(p)-1):
@@ -95,13 +95,15 @@ def find_zero_crossing(p, d2):
     return None
 
 # -----------------------------
-# Streamlit UI: Step 1 Fe-foil解析
+# Step 1: Fe-foil解析
 # -----------------------------
 st.title("XANES Multiple File Fitting with Pulse Reference")
 st.subheader("Step 1: Pulse Reference Selection (Fe-foil)")
 
 method = st.radio("Choose pulse reference method:", ["Input manually", "Analyze Fe-foil file"])
 pulse_ref = None
+
+search_min = st.number_input("Fe-foil analysis: minimum pulse to analyze (SEARCH_MIN)", value=DEFAULT_SEARCH_MIN, step=1)
 
 if method=="Input manually":
     pulse_ref = st.number_input("Enter pulse reference", value=36000.0, step=1.0)
@@ -113,7 +115,7 @@ elif method=="Analyze Fe-foil file":
     if uploaded_file is not None:
         pulse, mu = load_xanes_file(uploaded_file)
         mu_s, d2 = compute_smoothed_d2(pulse, mu)
-        guess = find_zero_crossing(pulse,d2)
+        guess = find_zero_crossing(pulse, d2, search_min)
         initial_pulse = int(guess) if guess else int(pulse.min())
 
         col1, col2 = st.columns([3,1])
@@ -124,18 +126,32 @@ elif method=="Analyze Fe-foil file":
 
         pulse_ref = chosen_input
 
-        # Fe-foil Plotly確認
-        mask=pulse>=SEARCH_MIN
-        fig=go.Figure()
+        # Fe-foil Plotly
+        mask = pulse >= search_min
+        fig = go.Figure()
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu[mask], mode='lines+markers', name='mu', line=dict(color='black')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu_s[mask], mode='lines', name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=d2[mask], mode='lines', name='d2', line=dict(dash='dash'), yaxis='y2'))
+
+        # 第二軸 y=0 水平線
+        fig.add_shape(
+            type="line",
+            x0=pulse[mask].min(),
+            x1=pulse[mask].max(),
+            y0=0,
+            y1=0,
+            yref="y2",
+            line=dict(color="blue", dash="dot")
+        )
+
+        # パルスリファレンス縦線
         fig.add_vline(x=pulse_ref, line=dict(color='red', dash='dash'))
+
         fig.update_layout(
             xaxis_title="Pulse",
             yaxis=dict(title="mu"),
             yaxis2=dict(title="d2", overlaying='y', side='right'),
-            xaxis=dict(tickformat="06d"),  # 6桁表示
+            xaxis=dict(tickformat="06d"),
             width=800, height=400
         )
         st.plotly_chart(fig, use_container_width=True)
@@ -233,16 +249,7 @@ if pulse_ref is not None:
                 fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g1+baseline[mask_gauss],mode='lines',name='Gaussian1',line=dict(color='green',dash='dash')))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g2+baseline[mask_gauss],mode='lines',name='Gaussian2',line=dict(color='magenta',dash='dash')))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss,y=gauss_fit+baseline[mask_gauss],mode='lines',name='Total fit',line=dict(color='blue')))
-                # y=0水平線
-                fig_plotly.add_shape(
-                    type="line",
-                    x0=energy.min(),
-                    x1=energy.max(),
-                    y0=0,
-                    y1=0,
-                    yref="y",  # 主軸
-                    line=dict(color="blue", dash="dot")
-                )
+                # パルスリファレンス表示など不要
                 fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
                 fig_plotly.update_layout(
                     xaxis=dict(range=[7108,7116]),
