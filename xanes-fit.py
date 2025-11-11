@@ -1,4 +1,4 @@
-# xanes_fit_streamlit_fixed.py
+# xanes_fit_streamlit_baseline_gauss.py
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -98,9 +98,7 @@ def find_zero_crossing(p, d2):
 # -----------------------------
 st.title("XANES pre-edge 解析")
 
-# -----------------------------
-# Step 1: Pulse Reference
-# -----------------------------
+# Step1: Pulse reference
 st.subheader("Step 1: Pulse Reference Selection")
 method = st.radio("Fe-foilの第一変曲点位置:", ["手動入力", "Fe-foil fileの二階微分解析"])
 
@@ -128,32 +126,25 @@ elif method=="Fe-foil fileの二階微分解析":
         with col2:
             input_val = st.number_input("Or enter manually", min_value=min_p, max_value=max_p, value=slider_val, step=1)
 
-        st.session_state.pulse_ref = input_val
+        if st.button("Confirm pulse reference"):
+            st.session_state.pulse_ref = input_val
+            st.success(f"Confirmed pulse reference: {input_val}")
 
-        # -----------------------------
-        # Plotlyで確認（ズーム保持）
-        # -----------------------------
-        if "fefoil_zoom" not in st.session_state:
-            st.session_state.fefoil_zoom = {"x": None, "y": None}
-
-        mask=pulse>=SEARCH_MIN
+        mask = pulse >= SEARCH_MIN
         fig=go.Figure()
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu[mask], mode='lines+markers', name='raw', line=dict(color='black')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu_s[mask], mode='lines', name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=d2[mask], mode='lines', name='d2', line=dict(color='green', dash='dash'), yaxis='y2'))
-        fig.add_vline(x=st.session_state.pulse_ref, line=dict(color='red', dash='dash'))
 
-        x_range = st.session_state.fefoil_zoom["x"]
-        y_range = st.session_state.fefoil_zoom["y"]
+        if st.session_state.pulse_ref is not None:
+            fig.add_vline(x=st.session_state.pulse_ref, line=dict(color='red', dash='dash'))
+
         fig.update_layout(
             xaxis_title="Pulse",
             yaxis=dict(title="raw data"),
             yaxis2=dict(title="d2", overlaying='y', side='right'),
-            width=800, height=400,
-            xaxis_range=x_range,
-            yaxis_range=y_range
+            width=800, height=400
         )
-
         st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------------
@@ -163,9 +154,9 @@ if st.session_state.pulse_ref is not None:
     st.subheader("Step 2: Multiple File Fitting")
     uploaded_files = st.file_uploader("Select dat files for fitting", accept_multiple_files=True, type=['dat','txt'])
 
-    # ベースライン範囲（可変）
-    e_low_val = st.number_input("Baseline low energy (<=):", value=7110.0, step=0.1)
-    e_high_val = st.number_input("Baseline high energy (>=):", value=7115.0, step=0.1)
+    # バックグラウンド範囲設定
+    e_low_val = st.number_input("Baseline low energy (<=)", value=7110.0, step=0.1)
+    e_high_val = st.number_input("Baseline high energy (>=)", value=7114.0, step=0.1)
 
     if uploaded_files:
         png_buffers=[]
@@ -183,9 +174,7 @@ if st.session_state.pulse_ref is not None:
                 FeKa_norm=FeKa_norm[sort_idx]
                 FeKa_smooth=FeKa_smooth[sort_idx]
 
-                # -----------------------------
                 # Baseline
-                # -----------------------------
                 mask_low = energy <= e_low_val
                 mask_high = energy >= e_high_val
                 E_low = energy[mask_low][np.argmax(FeKa_smooth[mask_low])]
@@ -196,9 +185,7 @@ if st.session_state.pulse_ref is not None:
                 c_lin=I_low - m_lin*E_low
                 baseline = m_lin*energy + c_lin
 
-                # -----------------------------
                 # Gaussian fit
-                # -----------------------------
                 mask_gauss = (energy>=7110) & (energy<=7115)
                 E_gauss = energy[mask_gauss]
                 I_gauss = FeKa_smooth[mask_gauss] - baseline[mask_gauss]
@@ -210,9 +197,7 @@ if st.session_state.pulse_ref is not None:
                 g1 = gaussian(E_gauss, popt[0], popt[1], popt[2])
                 g2 = gaussian(E_gauss, popt[3], popt[4], popt[5])
 
-                # -----------------------------
                 # Matplotlib
-                # -----------------------------
                 fig_mpl, ax = plt.subplots(figsize=(10,6), constrained_layout=True)
                 ax.plot(energy, FeKa_norm, 'ko', alpha=0.5, label='raw')
                 ax.plot(energy, FeKa_smooth, 'k-', alpha=0.8, label='smoothed')
@@ -220,13 +205,11 @@ if st.session_state.pulse_ref is not None:
                 ax.plot(E_gauss, g1+baseline[mask_gauss], 'g--', linewidth=2, label='Gaussian1')
                 ax.plot(E_gauss, g2+baseline[mask_gauss], 'm--', linewidth=2, label='Gaussian2')
                 ax.plot(E_gauss, gauss_fit+baseline[mask_gauss], 'b-', linewidth=2, label='Total fit')
-
-                # X軸固定
-                ax.set_xlim(7108, 7116)
+                ax.set_xlim(7108,7116)
                 ylim_max = max(
                     FeKa_smooth[(energy>=7108)&(energy<=7116)].max(),
-                    (gauss_fit + baseline[mask_gauss]).max()
-                ) * 1.1
+                    (gauss_fit+baseline[mask_gauss]).max()
+                )*1.1
                 ax.set_ylim(0, ylim_max)
                 ax.set_xlabel("Energy (eV)")
                 ax.set_ylabel("Normalized intensity")
@@ -237,25 +220,16 @@ if st.session_state.pulse_ref is not None:
                 st.download_button(f"Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
                 plt.close(fig_mpl)
 
-                # -----------------------------
                 # Plotly
-                # -----------------------------
                 fig_plotly = go.Figure()
                 fig_plotly.add_trace(go.Scatter(x=energy, y=FeKa_norm, mode='markers', name='raw', marker=dict(color='black', opacity=0.5)))
                 fig_plotly.add_trace(go.Scatter(x=energy, y=FeKa_smooth, mode='lines', name='smoothed', line=dict(color='gray')))
                 fig_plotly.add_trace(go.Scatter(x=energy, y=baseline, mode='lines', name='baseline', line=dict(color='red', dash='dash')))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss, y=g1+baseline[mask_gauss], mode='lines', name='Gaussian1', line=dict(color='green', dash='dash', width=3)))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss, y=g2+baseline[mask_gauss], mode='lines', name='Gaussian2', line=dict(color='magenta', dash='dash', width=3)))
-                fig_plotly.add_trace(go.Scatter(x=E_gauss, y=gauss_fit+baseline[mask_gauss], mode='lines', name='Total fit', line=dict(color='blue', width=1)))
-
-                x_min, x_max = 7108, 7116
-                ylim_max = max(
-                    FeKa_smooth[(energy>=x_min)&(energy<=x_max)].max(),
-                    (gauss_fit + baseline[mask_gauss]).max()
-                ) * 1.1
-
+                fig_plotly.add_trace(go.Scatter(x=E_gauss, y=gauss_fit+baseline[mask_gauss], mode='lines', name='Total fit', line=dict(color='blue', width=3)))
                 fig_plotly.update_layout(
-                    xaxis=dict(range=[x_min, x_max]),
+                    xaxis=dict(range=[7108,7116]),
                     yaxis=dict(range=[0, ylim_max]),
                     title=uploaded_file.name,
                     xaxis_title="Energy (eV)",
