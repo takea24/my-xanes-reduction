@@ -133,11 +133,11 @@ elif method=="Fe-foil fileの二階微分解析":
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu[mask], mode='lines+markers', name='raw data', line=dict(color='black')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu_s[mask], mode='lines', name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=d2[mask], mode='lines', name='d2', line=dict(color='green',dash='dash'), yaxis='y2'))
-        fig.add_vline(x=pulse_ref, line=dict(color='yellow', dash='dash'))
+        fig.add_vline(x=pulse_ref, line=dict(color='red', dash='dash'))
         fig.add_hline(
             y=0,
             yref='y2',
-            line=dict(color='red', width=3, dash='solid'),  # 太さ3の実線
+            line=dict(color='red', width=1, dash='solid'),  # 太さ3の実線
             annotation_text="y=0",  # 任意でラベル
             annotation_position="top right"
         )
@@ -223,7 +223,7 @@ if pulse_ref is not None:
                 png_buffer.seek(0)
                 png_buffers.append((uploaded_file.name,png_buffer))
                 plt.close(fig_mpl)
-                st.download_button(f"Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
+                st.download_button(f"個別Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
 
                 # Plotly
                 fig_plotly=go.Figure()
