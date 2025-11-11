@@ -98,6 +98,11 @@ def find_zero_crossing(p, d2, search_min):
 # Step 1: Fe-foil解析
 # -----------------------------
 st.title("XANES Multiple File Fitting with Pulse Reference")
+
+# Step state
+if "step1_done" not in st.session_state:
+    st.session_state.step1_done = False
+
 st.subheader("Step 1: Pulse Reference Selection (Fe-foil)")
 
 method = st.radio("Choose pulse reference method:", ["Input manually", "Analyze Fe-foil file"])
@@ -106,11 +111,12 @@ pulse_ref = None
 if method=="Input manually":
     pulse_ref = st.number_input("鉄の第一変曲点のパルス位置", value=581700.0, step=1.0)
     if st.button("Confirm pulse reference"):
+        st.session_state.step1_done = True
         st.success(f"Confirmed pulse reference: {pulse_ref}")
 
 elif method=="Analyze Fe-foil file":
     uploaded_file = st.file_uploader("Select Fe foil .dat file", type=['dat','txt'])
-    search_min = st.number_input("第一変曲点探索範囲指定（これより大きい値で変曲点を探索）", value=DEFAULT_SEARCH_MIN, step=1)
+    search_min = st.number_input("第一変曲点探索範囲指定（これより大きい値で変曲点を再探索）", value=DEFAULT_SEARCH_MIN, step=1)
 
     if uploaded_file is not None:
         pulse, mu = load_xanes_file(uploaded_file)
@@ -157,12 +163,13 @@ elif method=="Analyze Fe-foil file":
         st.plotly_chart(fig, use_container_width=True)
 
         if st.button("Confirm pulse reference"):
+            st.session_state.step1_done = True
             st.success(f"Confirmed pulse reference: {pulse_ref}")
 
 # -----------------------------
 # Step 2: XANES Fitting
 # -----------------------------
-if pulse_ref is not None:
+if st.session_state.step1_done:
     st.subheader("Step 2: Multiple File Fitting")
     uploaded_files = st.file_uploader("Select dat files for fitting", accept_multiple_files=True, type=['dat','txt'])
     if uploaded_files:
