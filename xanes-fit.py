@@ -1,4 +1,4 @@
-# xanes_fit_streamlit_complete.py
+# xanes_fit_streamlit_fixed.py
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -154,7 +154,7 @@ elif method=="Fe-foil fileの二階微分解析":
             yaxis_range=y_range
         )
 
-        relayout_data = st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------------
 # Step 2: Multiple File Fitting
@@ -220,8 +220,13 @@ if st.session_state.pulse_ref is not None:
                 ax.plot(E_gauss, g1+baseline[mask_gauss], 'g--', linewidth=2, label='Gaussian1')
                 ax.plot(E_gauss, g2+baseline[mask_gauss], 'm--', linewidth=2, label='Gaussian2')
                 ax.plot(E_gauss, gauss_fit+baseline[mask_gauss], 'b-', linewidth=2, label='Total fit')
-                ax.set_xlim(min(energy), max(energy))
-                ylim_max = max(FeKa_smooth.max(), (gauss_fit+baseline[mask_gauss]).max())*1.1
+
+                # X軸固定
+                ax.set_xlim(7108, 7116)
+                ylim_max = max(
+                    FeKa_smooth[(energy>=7108)&(energy<=7116)].max(),
+                    (gauss_fit + baseline[mask_gauss]).max()
+                ) * 1.1
                 ax.set_ylim(0, ylim_max)
                 ax.set_xlabel("Energy (eV)")
                 ax.set_ylabel("Normalized intensity")
@@ -242,9 +247,13 @@ if st.session_state.pulse_ref is not None:
                 fig_plotly.add_trace(go.Scatter(x=E_gauss, y=g1+baseline[mask_gauss], mode='lines', name='Gaussian1', line=dict(color='green', dash='dash', width=3)))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss, y=g2+baseline[mask_gauss], mode='lines', name='Gaussian2', line=dict(color='magenta', dash='dash', width=3)))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss, y=gauss_fit+baseline[mask_gauss], mode='lines', name='Total fit', line=dict(color='blue', width=3)))
-                x_min = min(energy.min(), E_gauss.min())
-                x_max = max(energy.max(), E_gauss.max())
-                ylim_max = max(FeKa_smooth.max(), (gauss_fit + baseline[mask_gauss]).max())*1.1
+
+                x_min, x_max = 7108, 7116
+                ylim_max = max(
+                    FeKa_smooth[(energy>=x_min)&(energy<=x_max)].max(),
+                    (gauss_fit + baseline[mask_gauss]).max()
+                ) * 1.1
+
                 fig_plotly.update_layout(
                     xaxis=dict(range=[x_min, x_max]),
                     yaxis=dict(range=[0, ylim_max]),
