@@ -98,7 +98,7 @@ def find_zero_crossing(p, d2):
 # -----------------------------
 # Streamlit UI: Pulse Reference
 # -----------------------------
-st.title("XANES Multiple File Fitting with Pulse Reference")
+st.title("XANES Multiple File Fitting with Pulse Reference 解析")
 
 st.subheader("Step 1: Pulse Reference Selection")
 method = st.radio("Choose pulse reference method:", ["Input manually", "Analyze Fe-foil file"])
