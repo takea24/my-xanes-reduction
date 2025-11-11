@@ -172,7 +172,7 @@ if pulse_ref is not None:
                 FeKa_smooth=FeKa_smooth[sort_idx]
 
                 # Baseline
-                mask_low = energy <=7109
+                mask_low = energy <=7110
                 mask_high=energy>=7114
                 E_low = energy[mask_low][np.argmax(FeKa_smooth[mask_low])]
                 I_low = FeKa_smooth[mask_low][np.argmax(FeKa_smooth[mask_low])]
