@@ -35,7 +35,7 @@ def two_gauss(E, A1, mu1, sigma1, A2, mu2, sigma2):
 # -----------------------------
 # Streamlit UI
 # -----------------------------
-st.title("XANES Pre-edge Gaussian Fitting (Fe foil) - Interactive")
+st.title("XANES Pre-edge Gaussian Fitting (Fe foil) - Interactive (HTML Download)")
 
 uploaded_files = st.file_uploader(
     "Select multiple .dat/.txt files for analysis",
@@ -47,7 +47,7 @@ pulse_ref = st.number_input("Enter reference pulse", value=581650.0)
 
 if uploaded_files and pulse_ref:
 
-    # ZIP作成用バッファ
+    # ZIP作成用バッファ（テキストまとめ用）
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
 
@@ -147,15 +147,16 @@ if uploaded_files and pulse_ref:
             st.plotly_chart(fig, use_container_width=True)
 
             # -----------------------------
-            # 個別PNGダウンロード
+            # HTMLダウンロード
             # -----------------------------
-            png_buffer = io.BytesIO()
-            fig.write_image(png_buffer, format='png', scale=2)
-            png_buffer.seek(0)
-            st.download_button(f"Download {basename} graph", png_buffer, file_name=f"{basename}_fitting.png")
+            html_buffer = io.StringIO()
+            fig.write_html(html_buffer)
+            html_buffer.seek(0)
+            st.download_button(f"Download {basename} graph (HTML)", html_buffer,
+                               file_name=f"{basename}_fitting.html")
 
     # -----------------------------
     # ZIPダウンロード（テキストまとめ）
     # -----------------------------
     zip_buffer.seek(0)
-    st.download_button("Download all results (txt + png)", data=zip_buffer, file_name="results.zip")
+    st.download_button("Download all results (txt files)", data=zip_buffer, file_name="results.zip")
