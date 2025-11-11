@@ -270,7 +270,7 @@ if st.session_state.step1_done:
 
                 # Matplotlib保存ボタン
 
-                st.download_button(f"個別Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
+                st.download_button(f"グラフ個別Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
 
 
 
@@ -308,15 +308,6 @@ if st.session_state.step1_done:
             except Exception as e:
                 st.error(f"Error processing {uploaded_file.name}: {e}")
 
-        # ZIP一括ダウンロード
-        if png_buffers:
-            zip_buffer=io.BytesIO()
-            with zipfile.ZipFile(zip_buffer,"w") as zf:
-                for name, buf in png_buffers:
-                    zf.writestr(f"{name}_fitting.png", buf.getvalue())
-            zip_buffer.seek(0)
-            st.download_button("Download all PNGgraphs as ZIP", zip_buffer, file_name="all_fittings.zip")
-
         # ループ終了後
         if all_params:
             df_all = pd.DataFrame(all_params)
@@ -334,4 +325,13 @@ if st.session_state.step1_done:
                 mime="text/csv"
             )
 
+
+        # ZIP一括ダウンロード
+        if png_buffers:
+            zip_buffer=io.BytesIO()
+            with zipfile.ZipFile(zip_buffer,"w") as zf:
+                for name, buf in png_buffers:
+                    zf.writestr(f"{name}_fitting.png", buf.getvalue())
+            zip_buffer.seek(0)
+            st.download_button("Download all PNGgraphs as ZIP", zip_buffer, file_name="all_fittings.zip")
              
