@@ -1,23 +1,21 @@
-# fefoil-pulse-plotly.py
+# fefoil-pulse-plotly-slider-bottom.py
 import streamlit as st
 import numpy as np
-import pandas as pd
 from scipy.signal import savgol_filter
 import plotly.graph_objects as go
 
-# ---------- user-configurable ----------
+# ---------- 設定 ----------
 SKIP_HEADER = 3
 SG_WINDOW = 31
 SG_POLY = 5
 SEARCH_MIN = 581650
-# -------------------------------------
 
+# ---------- データ読み込み ----------
 def load_xanes_file(file):
     pulse_list = []
     mu_list = []
     lines = file.read().decode('utf-8', errors='ignore').splitlines()
     lines = lines[SKIP_HEADER:]
-
     for line in lines:
         s = line.strip()
         if not s or s.startswith('#'):
@@ -35,18 +33,16 @@ def load_xanes_file(file):
             continue
         pulse_list.append(p)
         mu_list.append(FeKa / I0)
-
     if len(pulse_list) == 0:
         raise RuntimeError("No valid numeric data found.")
     return np.array(pulse_list), np.array(mu_list)
 
 def compute_smoothed_d2(pulse, mu):
-    if SG_WINDOW >= len(mu):
+    window = SG_WINDOW
+    if window >= len(mu):
         lw = len(mu) - 1 if len(mu) % 2 == 0 else len(mu)
         window = max(5, lw)
         if window % 2 == 0: window -= 1
-    else:
-        window = SG_WINDOW
     mu_s = savgol_filter(mu, window_length=window, polyorder=SG_POLY, mode='interp')
     d1 = np.gradient(mu_s, pulse)
     d2 = np.gradient(d1, pulse)
@@ -65,7 +61,7 @@ def find_zero_crossing(p, d2):
             return x0
     return None
 
-# ---------- Streamlit UI ----------
+# ---------- Streamlit ----------
 st.title("Fe Foil E0 Pulse Determination (XANES)")
 
 uploaded_file = st.file_uploader("Select Fe foil .dat file", type=['dat','txt'])
@@ -75,26 +71,17 @@ if uploaded_file is not None:
         mu_s, d2 = compute_smoothed_d2(pulse, mu)
         guess_pulse = find_zero_crossing(pulse, d2)
 
-        # グラフ横軸範囲
-        min_p, max_p = int(pulse.min()), int(pulse.max())
-
-        # スライダー選択
-        st.subheader("Select Pulse")
-        chosen = st.slider(
-            "Adjust pulse",
-            min_value=min_p,
-            max_value=max_p,
-            value=int(guess_pulse) if guess_pulse else min_p,
-            step=1
-        )
-
-        # Plotly グラフ
         mask = pulse >= SEARCH_MIN
         p_plot = pulse[mask]
         mu_plot = mu[mask]
         mu_s_plot = mu_s[mask]
         d2_plot = d2[mask]
 
+        # グラフ横軸範囲
+        min_p, max_p = float(p_plot.min()), float(p_plot.max())
+        initial_pulse = float(guess_pulse) if guess_pulse else min_p
+
+        # ---------- Plotly グラフ ----------
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=p_plot, y=mu_plot, mode='lines+markers',
                                  name='mu (FeKa/I0)', line=dict(color='black')))
@@ -102,10 +89,10 @@ if uploaded_file is not None:
                                  name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=p_plot, y=d2_plot, mode='lines',
                                  name='d2', line=dict(dash='dash'), yaxis='y2'))
-        # 縦線
-        fig.add_vline(x=chosen, line=dict(color='red', dash='dash'), name='Selected pulse')
 
-        # 2軸設定
+        # 初期縦線
+        fig.add_vline(x=initial_pulse, line=dict(color='red', dash='dash'), name='Selected pulse')
+
         fig.update_layout(
             xaxis_title="Pulse",
             yaxis=dict(title="mu"),
@@ -116,6 +103,15 @@ if uploaded_file is not None:
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
+        # ---------- スライダー（グラフ横軸と同じ範囲） ----------
+        chosen = st.slider(
+            "Adjust pulse",
+            min_value=min_p,
+            max_value=max_p,
+            value=initial_pulse,
+            step=1
+        )
 
         st.success(f"Selected pulse: {chosen:.1f}")
 
