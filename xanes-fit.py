@@ -105,7 +105,7 @@ method = st.radio("Fe-foilの第一変曲点位置:", ["Input manually パルス
 
 pulse_ref = None
 
-if method=="Input manually パルスの手動入力":
+if method=="パルス位置の手動入力（Fe-foil解析済みのとき）":
     pulse_ref = st.number_input("Enter pulse reference", value=581700.0, step=1.0)
     if st.button("Confirm pulse reference (確定したら押す）"):
         st.success(f"Confirmed pulse reference (確定値）: {pulse_ref}")
