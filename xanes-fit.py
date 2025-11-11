@@ -135,7 +135,15 @@ elif method=="Analyze Fe-foil file":
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu[mask], mode='lines+markers', name='mu', line=dict(color='black')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu_s[mask], mode='lines', name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=d2[mask], mode='lines', name='d2', line=dict(dash='dash'), yaxis='y2'))
-        fig.add_hline(y=0, yaxis='y2', line=dict(color='blue', dash='dot'))  # ← y=0水平線
+        fig.add_shape(
+            type="line",
+            x0=pulse[mask].min(),
+            x1=pulse[mask].max(),
+            y0=0,
+            y1=0,
+            yref="y2",
+            line=dict(color="blue", dash="dot")
+        )
         fig.add_vline(x=pulse_ref, line=dict(color='red', dash='dash'))
         fig.update_layout(xaxis_title="Pulse", yaxis=dict(title="mu"), yaxis2=dict(title="d2", overlaying='y', side='right'), width=800, height=400)
         st.plotly_chart(fig, use_container_width=True)
