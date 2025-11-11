@@ -1,4 +1,4 @@
-# xanes-fit-with-pulseref.py (改良版)
+# xanes-fit-with-pulseref.py (完全版改良)
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -95,15 +95,11 @@ def find_zero_crossing(p, d2):
     return None
 
 # -----------------------------
-# Streamlit UI: Pulse Reference
+# Streamlit UI: Step 1 Fe-foil解析
 # -----------------------------
 st.title("XANES Multiple File Fitting with Pulse Reference")
+st.subheader("Step 1: Pulse Reference Selection (Fe-foil)")
 
-st.subheader("Step 0: Fe-foil background settings")
-bg_low = st.number_input("Lower background limit (eV, ≤)", value=7110.0, step=0.01)
-bg_high = st.number_input("Upper background limit (eV, ≥)", value=7114.0, step=0.01)
-
-st.subheader("Step 1: Pulse Reference Selection")
 method = st.radio("Choose pulse reference method:", ["Input manually", "Analyze Fe-foil file"])
 pulse_ref = None
 
@@ -118,52 +114,53 @@ elif method=="Analyze Fe-foil file":
         pulse, mu = load_xanes_file(uploaded_file)
         mu_s, d2 = compute_smoothed_d2(pulse, mu)
         guess = find_zero_crossing(pulse,d2)
-        min_p, max_p = int(pulse.min()), int(pulse.max())
-        initial_pulse = int(guess) if guess else min_p
+        initial_pulse = int(guess) if guess else int(pulse.min())
 
         col1, col2 = st.columns([3,1])
         with col1:
-            chosen_slider = st.slider("Adjust pulse", min_value=min_p, max_value=max_p, value=initial_pulse, step=1)
+            chosen_slider = st.slider("Adjust pulse", min_value=int(pulse.min()), max_value=int(pulse.max()), value=initial_pulse, step=1)
         with col2:
-            chosen_input = st.number_input("Or enter manually", min_value=min_p, max_value=max_p, value=chosen_slider, step=1)
+            chosen_input = st.number_input("Or enter manually", min_value=int(pulse.min()), max_value=int(pulse.max()), value=chosen_slider, step=1)
 
         pulse_ref = chosen_input
 
-        # Plotlyで確認
+        # Fe-foil Plotly確認
         mask=pulse>=SEARCH_MIN
         fig=go.Figure()
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu[mask], mode='lines+markers', name='mu', line=dict(color='black')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu_s[mask], mode='lines', name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=d2[mask], mode='lines', name='d2', line=dict(dash='dash'), yaxis='y2'))
-        fig.add_shape(
-            type="line",
-            x0=pulse[mask].min(),
-            x1=pulse[mask].max(),
-            y0=0,
-            y1=0,
-            yref="y2",
-            line=dict(color="blue", dash="dot")
-        )
         fig.add_vline(x=pulse_ref, line=dict(color='red', dash='dash'))
-        fig.update_layout(xaxis_title="Pulse", yaxis=dict(title="mu"), yaxis2=dict(title="d2", overlaying='y', side='right'), width=800, height=400)
+        fig.update_layout(
+            xaxis_title="Pulse",
+            yaxis=dict(title="mu"),
+            yaxis2=dict(title="d2", overlaying='y', side='right'),
+            xaxis=dict(tickformat="06d"),  # 6桁表示
+            width=800, height=400
+        )
         st.plotly_chart(fig, use_container_width=True)
 
         if st.button("Confirm pulse reference"):
             st.success(f"Confirmed pulse reference: {pulse_ref}")
 
 # -----------------------------
-# Step 2: XANES Multiple File Fitting
+# Step 2: XANES Fitting
 # -----------------------------
 if pulse_ref is not None:
     st.subheader("Step 2: Multiple File Fitting")
     uploaded_files = st.file_uploader("Select dat files for fitting", accept_multiple_files=True, type=['dat','txt'])
     if uploaded_files:
         st.write(f"{len(uploaded_files)} files selected.")
+
+        # Step2のみベースライン入力フォーム
+        st.subheader("Baseline selection (manual input)")
+        bg_low = st.number_input("Lower background limit (eV, ≤)", value=7110.0, step=0.01)
+        bg_high = st.number_input("Upper background limit (eV, ≥)", value=7114.0, step=0.01)
+
         png_buffers = []
 
         for uploaded_file in uploaded_files:
             try:
-                # データ読み込み
                 data=pd.read_csv(uploaded_file, skiprows=3, header=None)
                 pulse = data[0].values
                 I0 = data[1].values
@@ -201,9 +198,7 @@ if pulse_ref is not None:
                 area2 = popt[3]*popt[5]*np.sqrt(2*np.pi)
                 centroid = (popt[1]*area1 + popt[4]*area2)/(area1+area2)
 
-                # -----------------------------
-                # Matplotlib PNG
-                # -----------------------------
+                # Matplotlib
                 fig_mpl, ax = plt.subplots(figsize=(10,6), constrained_layout=True)
                 ax.plot(energy, FeKa_norm, 'ko', alpha=0.5, label='raw')
                 ax.plot(energy, FeKa_smooth, 'k-', alpha=0.8, label='smoothed')
@@ -229,17 +224,25 @@ if pulse_ref is not None:
                 plt.close(fig_mpl)
                 st.download_button(f"Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
 
-                # -----------------------------
                 # Plotly
-                # -----------------------------
                 fig_plotly=go.Figure()
                 fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_norm,mode='markers',name='raw',marker=dict(color='black',opacity=0.5)))
                 fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_smooth,mode='lines',name='smoothed',line=dict(color='gray')))
                 fig_plotly.add_trace(go.Scatter(x=energy,y=baseline,mode='lines',name='baseline',line=dict(color='red',dash='dash')))
-                # Gaussians追加
+                # Gaussians
                 fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g1+baseline[mask_gauss],mode='lines',name='Gaussian1',line=dict(color='green',dash='dash')))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g2+baseline[mask_gauss],mode='lines',name='Gaussian2',line=dict(color='magenta',dash='dash')))
                 fig_plotly.add_trace(go.Scatter(x=E_gauss,y=gauss_fit+baseline[mask_gauss],mode='lines',name='Total fit',line=dict(color='blue')))
+                # y=0水平線
+                fig_plotly.add_shape(
+                    type="line",
+                    x0=energy.min(),
+                    x1=energy.max(),
+                    y0=0,
+                    y1=0,
+                    yref="y",  # 主軸
+                    line=dict(color="blue", dash="dot")
+                )
                 fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
                 fig_plotly.update_layout(
                     xaxis=dict(range=[7108,7116]),
@@ -253,7 +256,7 @@ if pulse_ref is not None:
             except Exception as e:
                 st.error(f"Error processing {uploaded_file.name}: {e}")
 
-        # 一括ZIPダウンロード
+        # ZIP一括ダウンロード
         if png_buffers:
             zip_buffer=io.BytesIO()
             with zipfile.ZipFile(zip_buffer,"w") as zf:
