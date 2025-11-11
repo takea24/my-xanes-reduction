@@ -272,7 +272,7 @@ if pulse_ref is not None:
                 )
 
                 st.write(f"### Gaussian Fit Parameters — {uploaded_file.name}")
-                st.dataframe(df.style.format("{:.4g}"))
+                st.dataframe(df.style.format("{:.5g}"))
 
                 st.write(f"**Centroid** = {centroid:.4f} eV")
 
