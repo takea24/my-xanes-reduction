@@ -19,7 +19,6 @@ uploaded_files = st.file_uploader(
 
 # --- スムージングオプション ---
 smooth_method = st.selectbox("Smoothing method", ["None", "Gaussian", "Savitzky-Golay"])
-
 if smooth_method == "Gaussian":
     sigma = st.slider("Gaussian sigma", 0.0, 5.0, 1.0, 0.1)
 elif smooth_method == "Savitzky-Golay":
@@ -31,15 +30,32 @@ distance = st.slider("Minimum peak distance", 1, 50, 5)
 height = st.number_input("Minimum peak height (optional, leave 0 to ignore)", value=0.01)
 prominence = st.number_input("Minimum peak prominence (optional, leave 0 to ignore)", value=0.01)
 
+# --- メイン処理 ---
 if uploaded_files:
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w") as zip_file:
         for uploaded_file in uploaded_files:
-            # --- データ読み込み ---
+
+            # --- データ読み込み: 文字列行を自動スキップ ---
             try:
-                df = pd.read_csv(uploaded_file, delim_whitespace=True, header=None, engine='python')
-                if df.shape[1] < 2:
-                    df = pd.read_csv(uploaded_file, sep=',', header=None, engine='python')
+                # まず全行を文字列として読み込む
+                df_raw = pd.read_csv(uploaded_file, sep=None, header=None, engine='python', dtype=str)
+                
+                # 最初の2列が数値の行だけ残す
+                def is_numeric_row(row):
+                    try:
+                        float(row[0])
+                        float(row[1])
+                        return True
+                    except:
+                        return False
+                df_numeric = df_raw[df_raw.apply(is_numeric_row, axis=1)]
+                
+                if df_numeric.empty:
+                    st.warning(f"{uploaded_file.name} に有効なデータがありません")
+                    continue
+                
+                df = df_numeric.iloc[:, :2].astype(float)
             except Exception as e:
                 st.error(f"Cannot read {uploaded_file.name}: {e}")
                 continue
@@ -78,7 +94,7 @@ if uploaded_files:
                 name="Peaks",
                 marker=dict(color="red", size=8, symbol="x")
             ))
-            fig.update_layout(title=uploaded_file.name, xaxis_title="X", yaxis_title="Y")
+            fig.update_layout(title=uploaded_file.name, xaxis_title="Raman Shift", yaxis_title="Intensity")
             st.plotly_chart(fig)
 
             # --- MatplotlibでPNG保存 ---
