@@ -2,13 +2,13 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from scipy.signal import find_peaks, savgol_filter
-from scipy.ndimage import gaussian_filter1d
+from scipy.ndimage import gaussian_filter1d, grey_opening
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import io
 import zipfile
 
-st.title("Multi-file Peak Finder App")
+st.title("Multi-file Peak Finder App with Background Subtraction")
 
 # --- ファイルアップロード ---
 uploaded_files = st.file_uploader(
@@ -25,6 +25,11 @@ elif smooth_method == "Savitzky-Golay":
     window = st.number_input("SG window length (odd)", min_value=3, max_value=101, value=11, step=2)
     poly = st.number_input("SG polyorder", min_value=1, max_value=5, value=2)
 
+# --- 背景差し引き ---
+do_bg_sub = st.checkbox("Background subtraction (rolling ball)")
+if do_bg_sub:
+    r = st.slider("Background subtraction radius", 1, 100, 10)
+
 # --- ピーク検出パラメータ ---
 distance = st.slider("Minimum peak distance", 1, 50, 5)
 height = st.number_input("Minimum peak height (optional, leave 0 to ignore)", value=0.01)
@@ -35,13 +40,9 @@ if uploaded_files:
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w") as zip_file:
         for uploaded_file in uploaded_files:
-
-            # --- データ読み込み: 文字列行を自動スキップ ---
+            # --- データ読み込み（文字列行を自動スキップ） ---
             try:
-                # まず全行を文字列として読み込む
                 df_raw = pd.read_csv(uploaded_file, sep=None, header=None, engine='python', dtype=str)
-                
-                # 最初の2列が数値の行だけ残す
                 def is_numeric_row(row):
                     try:
                         float(row[0])
@@ -50,11 +51,9 @@ if uploaded_files:
                     except:
                         return False
                 df_numeric = df_raw[df_raw.apply(is_numeric_row, axis=1)]
-                
                 if df_numeric.empty:
                     st.warning(f"{uploaded_file.name} に有効なデータがありません")
                     continue
-                
                 df = df_numeric.iloc[:, :2].astype(float)
             except Exception as e:
                 st.error(f"Cannot read {uploaded_file.name}: {e}")
@@ -68,23 +67,34 @@ if uploaded_files:
                 y_smooth = gaussian_filter1d(y, sigma=sigma)
             elif smooth_method == "Savitzky-Golay":
                 if window % 2 == 0:
-                    window += 1  # 奇数に調整
+                    window += 1
                 y_smooth = savgol_filter(y, window_length=window, polyorder=poly)
             else:
                 y_smooth = y
+
+            # --- 背景差し引き ---
+            if do_bg_sub:
+                y_bg = grey_opening(y_smooth, size=r)
+                y_corrected = y_smooth - y_bg
+            else:
+                y_bg = np.zeros_like(y_smooth)
+                y_corrected = y_smooth
 
             # --- ピーク検出 ---
             peak_kwargs = {"distance": distance}
             if height > 0: peak_kwargs["height"] = height
             if prominence > 0: peak_kwargs["prominence"] = prominence
 
-            peaks_idx, properties = find_peaks(y_smooth, **peak_kwargs)
+            peaks_idx, properties = find_peaks(y_corrected, **peak_kwargs)
             peaks_x = x[peaks_idx]
-            peaks_y = y_smooth[peaks_idx]
+            peaks_y = y_corrected[peaks_idx]
 
-            # --- Plotlyで表示 ---
+            # --- Plotly表示 ---
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=x, y=y, mode="lines", name="Data"))
+            fig.add_trace(go.Scatter(x=x, y=y, mode="lines", name="Original"))
+            if do_bg_sub:
+                fig.add_trace(go.Scatter(x=x, y=y_bg, mode="lines", name="Background", line=dict(color="green", dash="dash")))
+            fig.add_trace(go.Scatter(x=x, y=y_corrected, mode="lines", name="Corrected", line=dict(color="orange")))
             fig.add_trace(go.Scatter(
                 x=peaks_x,
                 y=peaks_y,
@@ -94,18 +104,21 @@ if uploaded_files:
                 name="Peaks",
                 marker=dict(color="red", size=8, symbol="x")
             ))
-            fig.update_layout(title=uploaded_file.name, xaxis_title="Raman Shift", yaxis_title="Intensity")
+            fig.update_layout(title=uploaded_file.name, xaxis_title="X", yaxis_title="Y")
             st.plotly_chart(fig)
 
             # --- MatplotlibでPNG保存 ---
             fig_mat, ax = plt.subplots()
-            ax.plot(x, y, label="Data")
+            ax.plot(x, y, label="Original")
+            if do_bg_sub:
+                ax.plot(x, y_bg, "g--", label="Background")
+            ax.plot(x, y_corrected, "orange", label="Corrected")
             ax.plot(peaks_x, peaks_y, "rx", label="Peaks")
             for px, py in zip(peaks_x, peaks_y):
                 ax.text(px, py, f"{px:.2f}", fontsize=8, ha="center", va="bottom")
             ax.set_title(uploaded_file.name)
-            ax.set_xlabel("Raman Shift")
-            ax.set_ylabel("Intensity")
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y")
             ax.legend()
 
             img_buffer = io.BytesIO()
