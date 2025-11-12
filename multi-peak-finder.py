@@ -1,122 +1,102 @@
-# multi-peak-finder.py
 import streamlit as st
 import pandas as pd
 import numpy as np
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks, savgol_filter
+from scipy.ndimage import gaussian_filter1d
+import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import io
 import zipfile
-import csv
-import re
 
-st.set_page_config(page_title="Multi Peak Finder", layout="wide")
-st.title("📈 Multi Peak Finder App")
+st.title("Multi-file Peak Finder App")
 
-st.markdown("""
-複数のスペクトルデータ（txt, csv）をまとめて処理します。  
-タブ・カンマ・スペース区切りや、余計な先頭行があるファイルにも対応します。
-""")
+# --- ファイルアップロード ---
+uploaded_files = st.file_uploader(
+    "TXTファイルを複数選択",
+    type=["txt"],
+    accept_multiple_files=True
+)
 
-uploaded_files = st.file_uploader("数値データを選択（複数可）", type=["txt", "csv"], accept_multiple_files=True)
+# --- スムージングオプション ---
+smooth_method = st.selectbox("Smoothing method", ["None", "Gaussian", "Savitzky-Golay"])
 
-st.sidebar.header("ピーク検出パラメータ")
-height = st.sidebar.number_input("最小高さ (height)", value=0.0)
-distance = st.sidebar.number_input("最小距離 (distance)", value=5)
-prominence = st.sidebar.number_input("顕著さ (prominence)", value=0.0)
+if smooth_method == "Gaussian":
+    sigma = st.slider("Gaussian sigma", 0.0, 5.0, 1.0, 0.1)
+elif smooth_method == "Savitzky-Golay":
+    window = st.number_input("SG window length (odd)", min_value=3, max_value=101, value=11, step=2)
+    poly = st.number_input("SG polyorder", min_value=1, max_value=5, value=2)
 
-
-def read_numeric_data(file) -> pd.DataFrame:
-    """最初に不要な行をスキップし、区切り文字を自動判定して2列の数値データを読む"""
-    text = file.read().decode("utf-8", errors="ignore")
-    lines = text.splitlines()
-
-    # --- データ行の開始位置を自動検出 ---
-    start_idx = 0
-    for i, line in enumerate(lines):
-        # 数値っぽい行を探す（例: 123.4 456.7）
-        if re.match(r"^\s*[-+]?\d", line):
-            start_idx = i
-            break
-
-    data_text = "\n".join(lines[start_idx:])
-
-    # --- 区切り文字を推定 ---
-    try:
-        dialect = csv.Sniffer().sniff(data_text[:1000], delimiters="\t,; ")
-        sep = dialect.delimiter
-    except Exception:
-        sep = r"\s+"
-
-    # --- 読み込み ---
-    df = pd.read_csv(io.StringIO(data_text), sep=sep, engine="python", comment="#", header=None)
-    # 数値列のみ残す
-    df = df.select_dtypes(include=[np.number])
-    # 最初の2列を x, y として扱う
-    df = df.iloc[:, :2]
-    df.columns = ["x", "y"]
-    return df
-
+# --- ピーク検出パラメータ ---
+distance = st.slider("Minimum peak distance", 1, 50, 5)
+height = st.number_input("Minimum peak height (optional, leave 0 to ignore)", value=0.0)
+prominence = st.number_input("Minimum peak prominence (optional, leave 0 to ignore)", value=0.0)
 
 if uploaded_files:
-    st.info(f"{len(uploaded_files)} 個のファイルを処理します。")
-
     zip_buffer = io.BytesIO()
-    zip_archive = zipfile.ZipFile(zip_buffer, "w")
-    results_summary = []
+    with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+        for uploaded_file in uploaded_files:
+            # --- データ読み込み ---
+            try:
+                df = pd.read_csv(uploaded_file, delim_whitespace=True, header=None, engine='python')
+                if df.shape[1] < 2:
+                    df = pd.read_csv(uploaded_file, sep=',', header=None, engine='python')
+            except Exception as e:
+                st.error(f"Cannot read {uploaded_file.name}: {e}")
+                continue
 
-    for uploaded_file in uploaded_files:
-        filename = uploaded_file.name
-        st.subheader(f"📄 {filename}")
+            x = df.iloc[:,0].values
+            y = df.iloc[:,1].values
 
-        try:
-            df = read_numeric_data(uploaded_file)
-        except Exception as e:
-            st.error(f"⚠️ {filename} の読み込みに失敗しました: {e}")
-            continue
+            # --- スムージング ---
+            if smooth_method == "Gaussian":
+                y_smooth = gaussian_filter1d(y, sigma=sigma)
+            elif smooth_method == "Savitzky-Golay":
+                if window % 2 == 0:
+                    window += 1  # 奇数に調整
+                y_smooth = savgol_filter(y, window_length=window, polyorder=poly)
+            else:
+                y_smooth = y
 
-        # ピーク検出
-        peaks, properties = find_peaks(df["y"], height=height, distance=distance, prominence=prominence)
-        peaks_df = pd.DataFrame({
-            "x": df["x"].iloc[peaks],
-            "y": df["y"].iloc[peaks],
-            "prominence": properties.get("prominences", np.nan)
-        })
-        peaks_df["filename"] = filename
+            # --- ピーク検出 ---
+            peak_kwargs = {"distance": distance}
+            if height > 0: peak_kwargs["height"] = height
+            if prominence > 0: peak_kwargs["prominence"] = prominence
 
-        st.write(f"検出ピーク数: {len(peaks_df)}")
+            peaks_idx, properties = find_peaks(y_smooth, **peak_kwargs)
+            peaks_x = x[peaks_idx]
+            peaks_y = y_smooth[peaks_idx]
 
-        # Plotlyプロット
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df["x"], y=df["y"], mode="lines", name="Data"))
-        fig.add_trace(go.Scatter(
-            x=peaks_df["x"], y=peaks_df["y"],
-            mode="markers+text",
-            text=[f"{x:.2f}" for x in peaks_df["x"]],
-            textposition="top center",
-            name="Peaks",
-            marker=dict(color="red", size=8, symbol="x")
-        ))
-        fig.update_layout(title=f"{filename}", xaxis_title="X", yaxis_title="Y")
-        st.plotly_chart(fig, use_container_width=True)
+            # --- Plotlyで表示 ---
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=x, y=y, mode="lines", name="Data"))
+            fig.add_trace(go.Scatter(
+                x=peaks_x,
+                y=peaks_y,
+                mode="markers+text",
+                text=[f"{px:.2f}" for px in peaks_x],
+                textposition="top center",
+                name="Peaks",
+                marker=dict(color="red", size=8, symbol="x")
+            ))
+            fig.update_layout(title=uploaded_file.name, xaxis_title="X", yaxis_title="Y")
+            st.plotly_chart(fig)
 
-        # 結果保存
-        results_summary.append(peaks_df)
-        img_bytes = fig.to_image(format="png")
-        zip_archive.writestr(f"{filename}.png", img_bytes)
+            # --- MatplotlibでPNG保存 ---
+            fig_mat, ax = plt.subplots()
+            ax.plot(x, y, label="Data")
+            ax.plot(peaks_x, peaks_y, "rx", label="Peaks")
+            for px, py in zip(peaks_x, peaks_y):
+                ax.text(px, py, f"{px:.2f}", fontsize=8, ha="center", va="bottom")
+            ax.set_title(uploaded_file.name)
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y")
+            ax.legend()
 
-    zip_archive.close()
+            img_buffer = io.BytesIO()
+            fig_mat.savefig(img_buffer, format="png")
+            img_buffer.seek(0)
+            zip_file.writestr(f"{uploaded_file.name}.png", img_buffer.read())
+            plt.close(fig_mat)
 
-    if results_summary:
-        summary_df = pd.concat(results_summary, ignore_index=True)
-        st.subheader("📊 すべてのピーク検出結果")
-        st.dataframe(summary_df)
-
-        csv_bytes = summary_df.to_csv(index=False).encode("utf-8")
-        st.download_button("ピーク一覧をCSVでダウンロード", csv_bytes, "all_peaks.csv", "text/csv")
-
-        st.download_button(
-            "全グラフをZIPでダウンロード (PNG)",
-            data=zip_buffer.getvalue(),
-            file_name="all_peak_plots.zip",
-            mime="application/zip"
-        )
+    zip_buffer.seek(0)
+    st.download_button("全グラフをZIPでダウンロード", zip_buffer, "plots.zip", "application/zip")
