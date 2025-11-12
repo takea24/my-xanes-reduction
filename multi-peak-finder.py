@@ -87,4 +87,36 @@ if uploaded_files:
 
         # Plotlyプロット
         fig = go.Figure()
-        fig.add
+        fig.add_trace(go.Scatter(x=df["x"], y=df["y"], mode="lines", name="Data"))
+        fig.add_trace(go.Scatter(
+            x=peaks_df["x"], y=peaks_df["y"],
+            mode="markers+text",
+            text=[f"{x:.2f}" for x in peaks_df["x"]],
+            textposition="top center",
+            name="Peaks",
+            marker=dict(color="red", size=8, symbol="x")
+        ))
+        fig.update_layout(title=f"{filename}", xaxis_title="X", yaxis_title="Y")
+        st.plotly_chart(fig, use_container_width=True)
+
+        # 結果保存
+        results_summary.append(peaks_df)
+        img_bytes = fig.to_image(format="png")
+        zip_archive.writestr(f"{filename}.png", img_bytes)
+
+    zip_archive.close()
+
+    if results_summary:
+        summary_df = pd.concat(results_summary, ignore_index=True)
+        st.subheader("📊 すべてのピーク検出結果")
+        st.dataframe(summary_df)
+
+        csv_bytes = summary_df.to_csv(index=False).encode("utf-8")
+        st.download_button("ピーク一覧をCSVでダウンロード", csv_bytes, "all_peaks.csv", "text/csv")
+
+        st.download_button(
+            "全グラフをZIPでダウンロード (PNG)",
+            data=zip_buffer.getvalue(),
+            file_name="all_peak_plots.zip",
+            mime="application/zip"
+        )
