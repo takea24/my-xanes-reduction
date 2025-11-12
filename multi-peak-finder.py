@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 import io
 import zipfile
 
-st.title("Multi-file Peak Finder App with Background Subtraction")
+st.title("Multi-file Peak Finder App with Background Subtraction and Selectable Display")
 
 # --- ファイルアップロード ---
 uploaded_files = st.file_uploader(
@@ -34,6 +34,12 @@ if do_bg_sub:
 distance = st.slider("Minimum peak distance", 1, 50, 5)
 height = st.number_input("Minimum peak height (optional, leave 0 to ignore)", value=0.01)
 prominence = st.number_input("Minimum peak prominence (optional, leave 0 to ignore)", value=0.01)
+
+# --- 表示する要素を選択 ---
+show_original = st.checkbox("Show original", value=True)
+show_background = st.checkbox("Show background", value=True)
+show_corrected = st.checkbox("Show corrected", value=True)
+show_peaks = st.checkbox("Show peaks", value=True)
 
 # --- メイン処理 ---
 if uploaded_files:
@@ -91,31 +97,38 @@ if uploaded_files:
 
             # --- Plotly表示 ---
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=x, y=y, mode="lines", name="Original"))
-            if do_bg_sub:
+            if show_original:
+                fig.add_trace(go.Scatter(x=x, y=y, mode="lines", name="Original"))
+            if do_bg_sub and show_background:
                 fig.add_trace(go.Scatter(x=x, y=y_bg, mode="lines", name="Background", line=dict(color="green", dash="dash")))
-            fig.add_trace(go.Scatter(x=x, y=y_corrected, mode="lines", name="Corrected", line=dict(color="orange")))
-            fig.add_trace(go.Scatter(
-                x=peaks_x,
-                y=peaks_y,
-                mode="markers+text",
-                text=[f"{px:.2f}" for px in peaks_x],
-                textposition="top center",
-                name="Peaks",
-                marker=dict(color="red", size=8, symbol="x")
-            ))
+            if show_corrected:
+                fig.add_trace(go.Scatter(x=x, y=y_corrected, mode="lines", name="Corrected", line=dict(color="orange")))
+            if show_peaks:
+                fig.add_trace(go.Scatter(
+                    x=peaks_x,
+                    y=peaks_y,
+                    mode="markers+text",
+                    text=[f"{px:.2f}" for px in peaks_x],
+                    textposition="top center",
+                    name="Peaks",
+                    marker=dict(color="red", size=8, symbol="x")
+                ))
             fig.update_layout(title=uploaded_file.name, xaxis_title="X", yaxis_title="Y")
             st.plotly_chart(fig)
 
             # --- MatplotlibでPNG保存 ---
             fig_mat, ax = plt.subplots()
-            ax.plot(x, y, label="Original")
-            if do_bg_sub:
+            if show_original:
+                ax.plot(x, y, label="Original")
+            if do_bg_sub and show_background:
                 ax.plot(x, y_bg, "g--", label="Background")
-            ax.plot(x, y_corrected, "orange", label="Corrected")
-            ax.plot(peaks_x, peaks_y, "rx", label="Peaks")
-            for px, py in zip(peaks_x, peaks_y):
-                ax.text(px, py, f"{px:.2f}", fontsize=8, ha="center", va="bottom")
+            if show_corrected:
+                ax.plot(x, y_corrected, "orange", label="Corrected")
+            if show_peaks:
+                ax.plot(peaks_x, peaks_y, "rx", label="Peaks")
+                for px, py in zip(peaks_x, peaks_y):
+                    ax.text(px, py, f"{px:.2f}", fontsize=8, ha="center", va="bottom")
+
             ax.set_title(uploaded_file.name)
             ax.set_xlabel("X")
             ax.set_ylabel("Y")
