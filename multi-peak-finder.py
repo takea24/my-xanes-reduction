@@ -28,7 +28,7 @@ elif smooth_method == "Savitzky-Golay":
 # --- 背景差し引き ---
 do_bg_sub = st.checkbox("Background subtraction (rolling ball)")
 if do_bg_sub:
-    r = st.slider("Background subtraction radius", 1, 100, 10)
+    r = st.slider("Background subtraction radius", 1, 100, 50)
 
 # --- ピーク検出パラメータ ---
 distance = st.slider("Minimum peak distance", 1, 50, 5)
