@@ -28,8 +28,8 @@ elif smooth_method == "Savitzky-Golay":
 
 # --- ピーク検出パラメータ ---
 distance = st.slider("Minimum peak distance", 1, 50, 5)
-height = st.number_input("Minimum peak height (optional, leave 0 to ignore)", value=0.0)
-prominence = st.number_input("Minimum peak prominence (optional, leave 0 to ignore)", value=0.0)
+height = st.number_input("Minimum peak height (optional, leave 0 to ignore)", value=0.01)
+prominence = st.number_input("Minimum peak prominence (optional, leave 0 to ignore)", value=0.01)
 
 if uploaded_files:
     zip_buffer = io.BytesIO()
@@ -88,8 +88,8 @@ if uploaded_files:
             for px, py in zip(peaks_x, peaks_y):
                 ax.text(px, py, f"{px:.2f}", fontsize=8, ha="center", va="bottom")
             ax.set_title(uploaded_file.name)
-            ax.set_xlabel("X")
-            ax.set_ylabel("Y")
+            ax.set_xlabel("Raman Shift")
+            ax.set_ylabel("Intensity")
             ax.legend()
 
             img_buffer = io.BytesIO()
