@@ -163,11 +163,11 @@ if st.session_state.step1_done:
     uploaded_files = st.file_uploader("Select dat files for fitting", accept_multiple_files=True, type=['dat','txt'])
     if uploaded_files:
         st.write(f"{len(uploaded_files)} files selected.")
-        st.subheader("Baseline selection (manual input)")
+        st.subheader("Baseline selection (option)")
         bg_low = st.number_input("Lower background limit (eV, ≤)", value=7110.0, step=0.01)
         bg_high = st.number_input("Upper background limit (eV, ≥)", value=7114.0, step=0.01)
 
-        st.subheader("Post-edge normalization settings")
+        st.subheader("Post-edge normalization settings 規格化する値の範囲 (option)")
         post_edge_min = st.number_input("Post-edge normalization min (eV)", value=7160.0, step=0.01)
         post_edge_max = st.number_input("Post-edge normalization max (eV)", value=7200.0, step=0.01)
 
