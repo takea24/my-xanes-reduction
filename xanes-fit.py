@@ -197,7 +197,7 @@ if st.session_state.step1_done:
                 baseline = m_lin*energy+c_lin
 
                 # --- ここからガウシアン範囲を個別指定 ---
-                st.write(f"File: {uploaded_file.name}")
+                st.markdown(f"> File: {uploaded_file.name}")
                 col1, col2 = st.columns(2)
                 with col1:
                     gauss_min = st.number_input(f"{uploaded_file.name} Gaussian fit min (eV)", value=7110.0, step=0.01, key=f"gauss_min_{uploaded_file.name}")
