@@ -159,7 +159,6 @@ elif method=="Analyze Fe-foil file":
 # -----------------------------
 if st.session_state.step1_done:
     st.subheader("Step 2: Multiple File Fitting")
-    st.write("※誤差はfittingパラメータから得られる最低限の誤差で測定誤差を含まない")
 
     uploaded_files = st.file_uploader("Select dat files for fitting", accept_multiple_files=True, type=['dat','txt'])
     if uploaded_files:
@@ -172,6 +171,7 @@ if st.session_state.step1_done:
         all_params = []
 
         st.subheader("Gaussian fitting")
+        st.write("※誤差はfittingパラメータから得られる最低限の誤差で測定誤差を含まない")
 
         for uploaded_file in uploaded_files:
             try:
@@ -360,3 +360,41 @@ if st.session_state.step1_done:
                     zf.writestr(f"{name}_fitting.png", buf.getvalue())
             zip_buffer.seek(0)
             st.download_button("Download all PNGgraphs as ZIP", zip_buffer, file_name="all_fittings.zip")
+
+        # -----------------------------
+        # Step 3: Fe3+ calculation from calibration
+        # -----------------------------
+        st.subheader("Step 3: Fe³⁺ calculation from calibration line")
+
+        if all_params:
+            df_all = pd.DataFrame(all_params)
+            
+            # Centroid → Fe3+ calculation
+            def centroid_to_fe3(centroid):
+                numerator = -0.028 + np.sqrt(0.000784 + 0.00052 * (7112 - centroid))
+                return numerator / -0.00026  # 100倍済み
+
+            df_all["Fe3+ (%)"] = df_all["Centroid"].apply(centroid_to_fe3)
+
+            st.dataframe(df_all.style.format("{:.3f}"))
+
+            # Plot: Centroid vs Fe3+
+            fig_cal = go.Figure()
+            # 検量線プロット
+            centroid_range = np.linspace(df_all["Centroid"].min()-0.1, df_all["Centroid"].max()+0.1, 200)
+            fe3_line = centroid_to_fe3(centroid_range)
+            fig_cal.add_trace(go.Scatter(x=centroid_range, y=fe3_line, mode='lines', name='Calibration line', line=dict(color='blue')))
+
+            # サンプル点
+            fig_cal.add_trace(go.Scatter(x=df_all["Centroid"], y=df_all["Fe3+ (%)"],
+                                         mode='markers+text', text=df_all["File"],
+                                         textposition='top center', name='Samples'))
+            
+            fig_cal.update_layout(
+                title="Calibration line & Centroid positions",
+                xaxis_title="Centroid (eV)",
+                yaxis_title="Fe³⁺ (%)",
+                width=800, height=500
+            )
+            st.plotly_chart(fig_cal, use_container_width=True)
+
