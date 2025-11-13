@@ -198,6 +198,7 @@ if st.session_state.step1_done:
 
                 # --- ここからガウシアン範囲を個別指定 ---
                 st.markdown(f"> File: {uploaded_file.name}")
+                st.write("ガウシアンのfitting範囲を指定（option）")
                 col1, col2 = st.columns(2)
                 with col1:
                     gauss_min = st.number_input(f"{uploaded_file.name} Gaussian fit min (eV)", value=7110.0, step=0.01, key=f"gauss_min_{uploaded_file.name}")
@@ -240,7 +241,7 @@ if st.session_state.step1_done:
                 ax.set_xlim(7108,7116)
                 mask_ylim=(energy>=7112)&(energy<=7116)
                 ylim_default = np.ceil(FeKa_smooth[mask_ylim].max()/0.01)*0.01
-
+                st.write("描画範囲(y軸)を指定（option）")
                 ylim_max_input = st.number_input(
                     f"{uploaded_file.name} Y-axis max", 
                     value=ylim_default, step=0.01, key=f"ymax_{uploaded_file.name}"
