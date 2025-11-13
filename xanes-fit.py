@@ -172,9 +172,9 @@ if st.session_state.step1_done:
 
         st.subheader("Gaussian fitting")
         st.write("※誤差はfittingパラメータから得られる最低限の誤差で測定誤差を含まない")
+        all_spectra = []
 
         for uploaded_file in uploaded_files:
-            all_spectra = []
             try:
                 data=pd.read_csv(uploaded_file, skiprows=3, header=None)
                 pulse = data[0].values
