@@ -194,17 +194,26 @@ if st.session_state.step1_done:
                 c_lin=I_low - m_lin*E_low
                 baseline = m_lin*energy+c_lin
 
-                # Gauss fitting (範囲 7110-7115)
-                mask_gauss=(energy>=7110)&(energy<=7115)
-                E_gauss=energy[mask_gauss]
-                I_gauss=FeKa_smooth[mask_gauss]-baseline[mask_gauss]
+                # --- ここからガウシアン範囲を個別指定 ---
+                st.write(f"File: {uploaded_file.name}")
+                col1, col2 = st.columns(2)
+                with col1:
+                    gauss_min = st.number_input(f"{uploaded_file.name} Gaussian fit min (eV)", value=7110.0, step=0.01, key=f"gauss_min_{uploaded_file.name}")
+                with col2:
+                    gauss_max = st.number_input(f"{uploaded_file.name} Gaussian fit max (eV)", value=7115.0, step=0.01, key=f"gauss_max_{uploaded_file.name}")
+
+                mask_gauss = (energy >= gauss_min) & (energy <= gauss_max)
+                E_gauss = energy[mask_gauss]
+                I_gauss = FeKa_smooth[mask_gauss] - baseline[mask_gauss]
+                # 初期値・範囲はデフォルトのまま
                 p0_gauss=[0.001,7111.8,0.5,0.001,7113.7,0.5]
                 lower=[0,7110,0,0,7112,0]
                 upper=[np.inf,7112,1,np.inf,7114,1]
                 popt,_=curve_fit(two_gauss,E_gauss,I_gauss,p0=p0_gauss,bounds=(lower,upper),maxfev=5000)
+                # --- ここまで変更 ---
 
-                # 描画用マスク（7110-7116）
-                mask_plot = (energy>=7110)&(energy<=7116)
+                # 描画用マスクは固定で7108-7116
+                mask_plot = (energy>=7108)&(energy<=7116)
                 E_plot = energy[mask_plot]
                 g1_plot = gaussian(E_plot,popt[0],popt[1],popt[2])
                 g2_plot = gaussian(E_plot,popt[3],popt[4],popt[5])
@@ -240,7 +249,7 @@ if st.session_state.step1_done:
                 png_buffers.append((uploaded_file.name,png_buffer))
                 plt.close(fig_mpl)
 
-                # Plotly
+                # Plotly描画（省略せず元コードと同じ）
                 fig_plotly=go.Figure()
                 fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_norm,mode='markers',name='raw',marker=dict(color='black',opacity=0.5)))
                 fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_smooth,mode='lines',name='smoothed',line=dict(color='gray')))
@@ -289,6 +298,8 @@ if st.session_state.step1_done:
 
             except Exception as e:
                 st.error(f"Error processing {uploaded_file.name}: {e}")
+
+        # Summary & ZIPは元コードと同じ
 
         # Summary
         if all_params:
