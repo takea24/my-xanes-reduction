@@ -213,7 +213,7 @@ if st.session_state.step1_done:
                 E_gauss=energy[mask_gauss]
                 I_gauss=FeKa_smooth[mask_gauss]-baseline[mask_gauss]
                 p0_gauss=[0.1,7111.8,0.5,0.1,7114,0.5]
-                lower=[0,7110,0,0,7112,0]
+                lower=[0.1,7110,0,0.1,7112,0]
                 upper=[np.inf,7112,2,np.inf,7116,2]
                 popt,_=curve_fit(two_gauss,E_gauss,I_gauss,p0=p0_gauss,bounds=(lower,upper),maxfev=5000)
                 gauss_fit=two_gauss(E_gauss,*popt)
