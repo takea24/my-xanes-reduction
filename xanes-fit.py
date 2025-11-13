@@ -214,6 +214,9 @@ if st.session_state.step1_done:
                 upper=[np.inf,7112,1,np.inf,7114,1]
                 popt, pcov = curve_fit(two_gauss, E_gauss, I_gauss,
                        p0=p0_gauss, bounds=(lower, upper), maxfev=5000)
+
+                A1, mu1, sigma1, A2, mu2, sigma2 = popt
+
                 if pcov is not None:
                     perr = np.sqrt(np.diag(pcov))
                 else:
@@ -299,7 +302,6 @@ if st.session_state.step1_done:
                 st.download_button(f"グラフ個別Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
 
                 # パラメータ計算
-                A1, mu1, sigma1, A2, mu2, sigma2 = popt
                 FWHM1 = 2.35482 * sigma1
                 FWHM2 = 2.35482 * sigma2
                 df = pd.DataFrame(
