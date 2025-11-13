@@ -9,12 +9,6 @@ from scipy.signal import savgol_filter
 import io
 import zipfile
 import plotly.graph_objects as go
-from scipy.special import wofz
-
-# Voigt関数
-def voigt(x, center, sigma, gamma, amp):
-    z = ((x - center) + 1j*gamma) / (sigma * np.sqrt(2))
-    return amp * np.real(wofz(z)) / (sigma * np.sqrt(2*np.pi))
 
 # -----------------------------
 # 定数
@@ -203,24 +197,16 @@ if st.session_state.step1_done:
                 FeKa_norm=FeKa_norm[sort_idx]
                 FeKa_smooth=FeKa_smooth[sort_idx]
 
-                # Baseline (polynomial + Voigt)
-                # 多項式: 7104–7109 eV
-                mask_poly = (energy >= 7104) & (energy <= 7109)
-                coeff_poly = np.polyfit(energy[mask_poly], FeKa_smooth[mask_poly], deg=2)
-                poly_bg = np.polyval(coeff_poly, energy)
-
-                # Voigt: 7116–7140 eV
-                mask_voigt = (energy >= 7115) & (energy <= 7120)
-                p0_voigt = [7125, 0.5, 0.5, 1.0]
-                try:
-                    params_voigt, _ = curve_fit(voigt, energy[mask_voigt], FeKa_smooth[mask_voigt],
-                                                p0=p0_voigt, maxfev=10000)
-                    voigt_bg = voigt(energy, *params_voigt)
-                except Exception as e:
-                    st.warning(f"Voigt fitting failed for {uploaded_file.name}: {e}")
-                    voigt_bg = np.zeros_like(energy)
-
-                baseline = poly_bg + voigt_bg
+                # Baseline
+                mask_low = energy <= bg_low
+                mask_high=energy >= bg_high
+                E_low = energy[mask_low][np.argmax(FeKa_smooth[mask_low])]
+                I_low = FeKa_smooth[mask_low][np.argmax(FeKa_smooth[mask_low])]
+                E_high = energy[mask_high][np.argmin(FeKa_smooth[mask_high])]
+                I_high = FeKa_smooth[mask_high][np.argmin(FeKa_smooth[mask_high])]
+                m_lin=(I_high-I_low)/(E_high-E_low)
+                c_lin=I_low - m_lin*E_low
+                baseline = m_lin*energy+c_lin
 
                 # Gauss fitting
                 mask_gauss=(energy>=7110)&(energy<=7115)
@@ -261,80 +247,25 @@ if st.session_state.step1_done:
                 png_buffers.append((uploaded_file.name,png_buffer))
                 plt.close(fig_mpl)
 
-                # -----------------------------
-                # Plotly: 2つの横軸範囲で表示
-                # -----------------------------
-                from plotly.subplots import make_subplots
-
-                # E_gauss, g1, g2 は既に pre-edge mask で計算済み
-
-                fig_plotly = make_subplots(rows=1, cols=2, subplot_titles=("Pre-edge narrow", "Pre-edge + main-edge wide"))
-
-                # --- 狭い範囲 7108–7116 eV ---
-                mask_narrow = (energy>=7108) & (energy<=7116)
-                energy_narrow = energy[mask_narrow]
-                FeKa_norm_narrow = FeKa_norm[mask_narrow]
-                FeKa_smooth_narrow = FeKa_smooth[mask_narrow]
-                baseline_narrow = baseline[mask_narrow]
-
-                fig_plotly.add_trace(go.Scatter(x=energy_narrow, y=FeKa_norm_narrow,
-                                                mode='markers', name='raw', marker=dict(color='black',opacity=0.5)),
-                                     row=1, col=1)
-                fig_plotly.add_trace(go.Scatter(x=energy_narrow, y=FeKa_smooth_narrow,
-                                                mode='lines', name='smoothed', line=dict(color='gray')),
-                                     row=1, col=1)
-                fig_plotly.add_trace(go.Scatter(x=energy_narrow, y=baseline_narrow,
-                                                mode='lines', name='baseline', line=dict(color='red',dash='dash')),
-                                     row=1, col=1)
-                # Gaussianは pre-edge のみ
-                fig_plotly.add_trace(go.Scatter(x=E_gauss, y=g1+baseline[mask_gauss],
-                                                mode='lines', name='Gaussian1', line=dict(color='green',dash='dash',width=3)),
-                                     row=1, col=1)
-                fig_plotly.add_trace(go.Scatter(x=E_gauss, y=g2+baseline[mask_gauss],
-                                                mode='lines', name='Gaussian2', line=dict(color='magenta',dash='dash',width=3)),
-                                     row=1, col=1)
-                fig_plotly.add_trace(go.Scatter(x=E_gauss, y=gauss_fit+baseline[mask_gauss],
-                                                mode='lines', name='Total fit', line=dict(color='blue',width=1)),
-                                     row=1, col=1)
-                fig_plotly.add_vline(x=centroid, line=dict(color='blue', dash='dot'),
-                                     annotation_text=f"Centroid={centroid:.2f}", annotation_position="top right", row=1, col=1)
-
-                # --- 広い範囲 7104–7128 eV ---
-                mask_wide = (energy>=7104) & (energy<=7128)
-                energy_wide = energy[mask_wide]
-                FeKa_norm_wide = FeKa_norm[mask_wide]
-                FeKa_smooth_wide = FeKa_smooth[mask_wide]
-                baseline_wide = baseline[mask_wide]
-
-                fig_plotly.add_trace(go.Scatter(x=energy_wide, y=FeKa_norm_wide,
-                                                mode='markers', name='raw', marker=dict(color='black',opacity=0.5)),
-                                     row=1, col=2)
-                fig_plotly.add_trace(go.Scatter(x=energy_wide, y=FeKa_smooth_wide,
-                                                mode='lines', name='smoothed', line=dict(color='gray')),
-                                     row=1, col=2)
-                fig_plotly.add_trace(go.Scatter(x=energy_wide, y=baseline_wide,
-                                                mode='lines', name='baseline', line=dict(color='red',dash='dash')),
-                                     row=1, col=2)
-                # Gaussian は E_gauss 上だけ描画
-                fig_plotly.add_trace(go.Scatter(x=E_gauss, y=g1+baseline[mask_gauss],
-                                                mode='lines', name='Gaussian1', line=dict(color='green',dash='dash',width=3)),
-                                     row=1, col=2)
-                fig_plotly.add_trace(go.Scatter(x=E_gauss, y=g2+baseline[mask_gauss],
-                                                mode='lines', name='Gaussian2', line=dict(color='magenta',dash='dash',width=3)),
-                                     row=1, col=2)
-                fig_plotly.add_trace(go.Scatter(x=E_gauss, y=gauss_fit+baseline[mask_gauss],
-                                                mode='lines', name='Total fit', line=dict(color='blue',width=1)),
-                                     row=1, col=2)
-                fig_plotly.add_vline(x=centroid, line=dict(color='blue', dash='dot'),
-                                     annotation_text=f"Centroid={centroid:.2f}", annotation_position="top right", row=1, col=2)
-
-                # 軸ラベル
-                fig_plotly.update_xaxes(title_text="Energy (eV)", row=1, col=1, range=[7108,7116])
-                fig_plotly.update_xaxes(title_text="Energy (eV)", row=1, col=2, range=[7104,7128])
-                fig_plotly.update_yaxes(title_text="Normalized intensity", row=1, col=1)
-                fig_plotly.update_yaxes(title_text="Normalized intensity", row=1, col=2)
-
-                st.plotly_chart(fig_plotly, use_container_width=True)
+                # Plotly
+                fig_plotly=go.Figure()
+                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_norm,mode='markers',name='raw',marker=dict(color='black',opacity=0.5)))
+                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_smooth,mode='lines',name='smoothed',line=dict(color='gray')))
+                fig_plotly.add_trace(go.Scatter(x=energy,y=baseline,mode='lines',name='baseline',line=dict(color='red',dash='dash')))
+                # Gaussians
+                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g1+baseline[mask_gauss],mode='lines',name='Gaussian1',line=dict(color='green',dash='dash', width=3)))
+                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g2+baseline[mask_gauss],mode='lines',name='Gaussian2',line=dict(color='magenta',dash='dash', width=3)))
+                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=gauss_fit+baseline[mask_gauss],mode='lines',name='Total fit',line=dict(color='blue', width=1)))
+                # パルスリファレンス表示など不要
+                fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
+                fig_plotly.update_layout(
+                    xaxis=dict(range=[7108,7116]),
+                    yaxis=dict(range=[0,ylim_max]),
+                    title=uploaded_file.name,
+                    xaxis_title="Energy (eV)",
+                    yaxis_title="Normalized intensity"
+                )
+                st.plotly_chart(fig_plotly,use_container_width=True)
 
 
                 # Matplotlib保存ボタン
