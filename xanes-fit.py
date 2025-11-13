@@ -400,7 +400,7 @@ if st.session_state.step1_done:
                     return [pred1 - f1, pred2 - f2]
 
                 # initial: Wilke’s values
-                init = [-0.028, -0.00026, 7112]
+                init = [-0.028, -0.00026, 7111]
                 res = least_squares(residual, init)
 
                 A_adj, D_adj, E0_adj = res.x
