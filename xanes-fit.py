@@ -383,7 +383,7 @@ if st.session_state.step1_done:
             # 検量線プロット
             centroid_range = np.linspace(df_all["Centroid"].min()-0.1, df_all["Centroid"].max()+0.1, 200)
             fe3_line = centroid_to_fe3(centroid_range)
-            fig_cal.add_trace(go.Scatter(x=centroid_range, y=fe3_line, mode='lines', name='Calibration line', line=dict(color='blue')))
+            fig_cal.add_trace(go.Scatter(x=centroid_range, y=fe3_line, mode='lines', name='Wilke et al. (2004)', line=dict(color='blue')))
 
             # サンプル点
             fig_cal.add_trace(go.Scatter(x=df_all["Centroid"], y=df_all["Fe3+ (%)"],
