@@ -179,8 +179,17 @@ if st.session_state.step1_done:
                 pulse = data[0].values
                 I0 = data[1].values
                 FeKa = data[2].values
-                FeKa_norm = FeKa/I0
                 energy = pulse_to_energy(pulse, pulse_ref)
+                FeKa_raw = FeKa / I0
+
+                # Post-edge 領域平均を1に規格化
+                post_edge_min = 7120.0  # ポストピークの下限 (eV)
+                post_edge_max = 7130.0  # ポストピークの上限 (eV)
+                mask_post = (energy >= post_edge_min) & (energy <= post_edge_max)
+                post_mean = np.mean(FeKa_raw[mask_post])
+                FeKa_norm = FeKa_raw / post_mean
+
+                # スムージング
                 FeKa_smooth = gaussian_filter1d(FeKa_norm, sigma=1)
                 sort_idx=np.argsort(energy)
                 energy=energy[sort_idx]
