@@ -198,7 +198,7 @@ if st.session_state.step1_done:
 
                 # --- ここからガウシアン範囲を個別指定 ---
                 st.markdown(f"> File: {uploaded_file.name}")
-                st.write("ガウシアンのfitting範囲を指定（option）")
+                st.write("- ガウシアンのfitting範囲を指定（option）")
                 col1, col2 = st.columns(2)
                 with col1:
                     gauss_min = st.number_input(f"{uploaded_file.name} Gaussian fit min (eV)", value=7110.0, step=0.01, key=f"gauss_min_{uploaded_file.name}")
@@ -213,7 +213,9 @@ if st.session_state.step1_done:
                 lower=[0,7110,0,0,7112,0]
                 upper=[np.inf,7112,1,np.inf,7114,1]
                 popt,_=curve_fit(two_gauss,E_gauss,I_gauss,p0=p0_gauss,bounds=(lower,upper),maxfev=5000)
-                # --- ここまで変更 ---
+
+                # パラメータ誤差
+                perr = np.sqrt(np.diag(pcov))  # [A1_err, mu1_err, sigma1_err, A2_err, mu2_err, sigma2_err]
 
                 # 描画用マスクは固定で7108-7116
                 mask_plot = (energy>=7108)&(energy<=7116)
@@ -237,11 +239,22 @@ if st.session_state.step1_done:
                 centroid = (popt[1]*area1 + popt[4]*area2)/(area1+area2)
                 ax.axvline(centroid,color='blue',linestyle=':',label=f'Centroid={centroid:.2f}')
 
+                # Centroid 誤差伝播（簡易）
+                dA1, dmu1, dA2, dmu2 = perr[0], perr[1], perr[3], perr[4]
+                numerator = A1*mu1 + A2*mu2
+                denominator = A1 + A2
+                d_centroid = np.sqrt(
+                    ((mu1*denominator - numerator)/(denominator**2) * dA1)**2 +
+                    (A1/denominator * dmu1)**2 +
+                    ((mu2*denominator - numerator)/(denominator**2) * dA2)**2 +
+                    (A2/denominator * dmu2)**2
+                )
+
                 # 軸設定
                 ax.set_xlim(7108,7116)
                 mask_ylim=(energy>=7112)&(energy<=7116)
                 ylim_default = np.ceil(FeKa_smooth[mask_ylim].max()/0.01)*0.01
-                st.write("描画範囲(y軸)を指定（option）")
+                st.write("- 描画範囲(y軸)を指定（option）")
                 ylim_max_input = st.number_input(
                     f"{uploaded_file.name} Y-axis max", 
                     value=ylim_default, step=0.01, key=f"ymax_{uploaded_file.name}"
@@ -290,11 +303,12 @@ if st.session_state.step1_done:
                     index=["Height A", "Center μ (eV)", "σ", "FWHM", "Area"]
                 )
                 st.dataframe(df.style.format("{:.5g}"))
-                st.write(f"**Centroid** = {centroid:.4f} eV")
-                      
+                st.write(f"**Centroid peak position** = {centroid:.2f} ± {d_centroid:.2f} eV")                      
+
                 all_params.append({
                     "File": uploaded_file.name,
                     "Centroid": centroid,
+                    "Error": d_centroid,
                     "Gaussian1_A": A1,
                     "Gaussian1_mu": mu1,
                     "Gaussian1_sigma": sigma1,
