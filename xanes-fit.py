@@ -174,6 +174,7 @@ if st.session_state.step1_done:
         st.write("※誤差はfittingパラメータから得られる最低限の誤差で測定誤差を含まない")
 
         for uploaded_file in uploaded_files:
+            all_spectra = []
             try:
                 data=pd.read_csv(uploaded_file, skiprows=3, header=None)
                 pulse = data[0].values
@@ -196,6 +197,12 @@ if st.session_state.step1_done:
                 FeKa_norm=FeKa_norm[sort_idx]
                 FeKa_smooth=FeKa_smooth[sort_idx]
 
+                all_spectra.append({
+                    "name": uploaded_file.name,
+                    "energy": energy,
+                    "intensity": FeKa_norm
+                })
+                
                 # Baseline
                 mask_low = energy <= bg_low
                 mask_high=energy >= bg_high
@@ -345,37 +352,13 @@ if st.session_state.step1_done:
             except Exception as e:
                 st.error(f"Error processing {uploaded_file.name}: {e}")
 
-        # Summary & ZIPは元コードと同じ
-
-        # -----------------------------
-        # Summary前に全スペクトル重ね描き
-        # -----------------------------
-        if all_params:
-            st.subheader("Normalized spectra overlay")
+        # ループ終了後にグラフを追加
+        if all_spectra:
             fig_overlay = go.Figure()
-            for uploaded_file in uploaded_files:
-                try:
-                    data=pd.read_csv(uploaded_file, skiprows=3, header=None)
-                    pulse = data[0].values
-                    I0 = data[1].values
-                    FeKa = data[2].values
-                    energy = pulse_to_energy(pulse, pulse_ref)
-                    FeKa_norm = FeKa/I0
-
-                    # Post-peak平均で1に規格化
-                    post_peak_mask = energy >= bg_high  # bg_high以降をポストピーク領域と仮定
-                    post_peak_avg = FeKa_norm[post_peak_mask].mean()
-                    FeKa_norm /= post_peak_avg
-
-                    sort_idx = np.argsort(energy)
-                    energy = energy[sort_idx]
-                    FeKa_norm = FeKa_norm[sort_idx]
-
-                    fig_overlay.add_trace(
-                        go.Scatter(x=energy, y=FeKa_norm, mode='lines', name=uploaded_file.name)
-                    )
-                except Exception as e:
-                    st.warning(f"Could not process {uploaded_file.name} for overlay: {e}")
+            for spec in all_spectra:
+                fig_overlay.add_trace(
+                    go.Scatter(x=spec["energy"], y=spec["intensity"], mode='lines', name=spec["name"])
+                )
 
             fig_overlay.update_layout(
                 title="Normalized XANES spectra overlay",
@@ -384,7 +367,6 @@ if st.session_state.step1_done:
                 width=900, height=500
             )
             st.plotly_chart(fig_overlay, use_container_width=True)
-
 
 
         # Summary
