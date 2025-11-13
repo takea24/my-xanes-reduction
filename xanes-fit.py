@@ -347,6 +347,46 @@ if st.session_state.step1_done:
 
         # Summary & ZIPは元コードと同じ
 
+        # -----------------------------
+        # Summary前に全スペクトル重ね描き
+        # -----------------------------
+        if all_params:
+            st.subheader("Normalized spectra overlay")
+            fig_overlay = go.Figure()
+            for uploaded_file in uploaded_files:
+                try:
+                    data=pd.read_csv(uploaded_file, skiprows=3, header=None)
+                    pulse = data[0].values
+                    I0 = data[1].values
+                    FeKa = data[2].values
+                    energy = pulse_to_energy(pulse, pulse_ref)
+                    FeKa_norm = FeKa/I0
+
+                    # Post-peak平均で1に規格化
+                    post_peak_mask = energy >= bg_high  # bg_high以降をポストピーク領域と仮定
+                    post_peak_avg = FeKa_norm[post_peak_mask].mean()
+                    FeKa_norm /= post_peak_avg
+
+                    sort_idx = np.argsort(energy)
+                    energy = energy[sort_idx]
+                    FeKa_norm = FeKa_norm[sort_idx]
+
+                    fig_overlay.add_trace(
+                        go.Scatter(x=energy, y=FeKa_norm, mode='lines', name=uploaded_file.name)
+                    )
+                except Exception as e:
+                    st.warning(f"Could not process {uploaded_file.name} for overlay: {e}")
+
+            fig_overlay.update_layout(
+                title="Normalized XANES spectra overlay",
+                xaxis_title="Energy (eV)",
+                yaxis_title="Normalized intensity (post-peak avg = 1)",
+                width=900, height=500
+            )
+            st.plotly_chart(fig_overlay, use_container_width=True)
+
+
+
         # Summary
         if all_params:
             df_all = pd.DataFrame(all_params)
