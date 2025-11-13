@@ -376,8 +376,8 @@ if st.session_state.step1_done:
 
             df_all["Fe3+ (%)"] = df_all["Centroid"].apply(centroid_to_fe3)
 
-            st.dataframe(df_all.style.format("{:.3f}"))
-
+            numeric_cols = df_all.select_dtypes(include=np.number).columns
+            st.dataframe(df_all.style.format({col: "{:.3f}" for col in numeric_cols}))
             # Plot: Centroid vs Fe3+
             fig_cal = go.Figure()
             # 検量線プロット
