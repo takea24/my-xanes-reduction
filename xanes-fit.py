@@ -378,11 +378,11 @@ if st.session_state.step1_done:
 
             numeric_cols = df_all.select_dtypes(include=np.number).columns
 
-            # 指定した行インデックス（存在する範囲でのみ表示）
-            rows_to_show = [0, 1, 2, 3, 10]
-            rows_to_show = [i for i in rows_to_show if i < len(df_all)]  # 範囲外対策
+            # 表示したい列だけ指定
+            cols_to_show = ["File", "Centroid", "Error", "Fe3+ (%)"]  # ←例
+            cols_to_show = [c for c in cols_to_show if c in df_all.columns]  # 存在チェック
 
-            st.dataframe(df_all.iloc[rows_to_show].style.format({col: "{:.3f}" for col in numeric_cols}))
+            st.dataframe(df_all.loc[:, cols_to_show].style.format({col: "{:.3f}" for col in numeric_cols if col in cols_to_show}))
 
             # Plot: Centroid vs Fe3+
             fig_cal = go.Figure()
