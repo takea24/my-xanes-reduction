@@ -184,8 +184,8 @@ if st.session_state.step1_done:
                 FeKa_raw = FeKa / I0
 
                 # Post-edge 領域平均を1に規格化
-                post_edge_min = 7120.0  # ポストピークの下限 (eV)
-                post_edge_max = 7130.0  # ポストピークの上限 (eV)
+                post_edge_min = 7160.0  # ポストピークの下限 (eV)
+                post_edge_max = 7200.0  # ポストピークの上限 (eV)
                 mask_post = (energy >= post_edge_min) & (energy <= post_edge_max)
                 post_mean = np.mean(FeKa_raw[mask_post])
                 FeKa_norm = FeKa_raw / post_mean
