@@ -304,6 +304,9 @@ if st.session_state.step1_done:
                     "Gaussian2_FWHM": FWHM2
                 })
 
+                # 区切り線を挿入
+                st.markdown("---")
+                
             except Exception as e:
                 st.error(f"Error processing {uploaded_file.name}: {e}")
 
