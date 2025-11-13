@@ -362,66 +362,119 @@ if st.session_state.step1_done:
             st.download_button("Download all PNGgraphs as ZIP", zip_buffer, file_name="all_fittings.zip")
 
         # -----------------------------
-        # Step 3: Fe3+ calculation from calibration
+        # Step 3: Wilke-adjusted nonlinear calibration (2-point constrained)
         # -----------------------------
-        st.subheader("Step 3: Fe³⁺ calculation from calibration line")
+        import math
+        from scipy.optimize import minimize
+
+        st.subheader("Step 3: Wilke-based nonlinear calibration adjusted to 2 standards")
 
         if all_params:
             df_all = pd.DataFrame(all_params)
-            
-            # --- (A) 元の関数（参考用） ---
-            def centroid_to_fe3_wilke(centroid):
-                numerator = -0.028 + np.sqrt(0.000784 + 0.00052 * (7112 - centroid))
-                return numerator / -0.00026  # 100倍済み
 
-            df_all["Fe3+_Wilke(%)"] = df_all["Centroid"].apply(centroid_to_fe3_wilke)
+            # Wilke 元式（ベクトル対応）
+            def wilke_fe3(centroid):
+                # centroid: scalar or numpy array
+                return (-0.028 + np.sqrt(0.000784 + 0.00052 * (7112 - centroid))) / -0.00026
 
-            # --- (B) 自動で標準試料を探す ---
-            fe2_std = df_all[df_all["File"].str.contains("kst", case=False, na=False)]
-            fe3_std = df_all[df_all["File"].str.contains("iki", case=False, na=False)]
+            df_all["Fe3_Wilke(%)"] = wilke_fe3(df_all["Centroid"].values)
 
-            if not fe2_std.empty and not fe3_std.empty:
-                c1 = fe2_std["Centroid"].mean()
-                c2 = fe3_std["Centroid"].mean()
-                fe1, fe2 = 1.0, 93.0
+            # 自動検出: kst -> 1%, iki -> 93%
+            fe2_mask = df_all["File"].str.contains("kst", case=False, na=False)
+            fe3_mask = df_all["File"].str.contains("iki", case=False, na=False)
 
-                # --- (C) 線形検量線作成 ---
-                a = (fe2 - fe1) / (c2 - c1)
-                b = fe1 - a * c1
-
-                def centroid_to_fe3_linear(centroid):
-                    return a * centroid + b
-
-                df_all["Fe3+ (%)"] = df_all["Centroid"].apply(centroid_to_fe3_linear)
-
-                # --- (D) 表示 ---
-                numeric_cols = df_all.select_dtypes(include=np.number).columns
-                cols_to_show = ["File", "Centroid", "Fe3+ (%)", "Fe3+_Wilke(%)"]
-                cols_to_show = [c for c in cols_to_show if c in df_all.columns]
-                st.dataframe(df_all.loc[:, cols_to_show].style.format({col: "{:.3f}" for col in numeric_cols if col in cols_to_show}))
-
-                # --- (E) プロット ---
-                centroid_range = np.linspace(df_all["Centroid"].min()-0.1, df_all["Centroid"].max()+0.1, 200)
-                fe3_line_wilke = centroid_to_fe3_wilke(centroid_range)
-                fe3_line_linear = centroid_to_fe3_linear(centroid_range)
-
-                fig_cal = go.Figure()
-                fig_cal.add_trace(go.Scatter(x=centroid_range, y=fe3_line_wilke, mode='lines',
-                                             name='Wilke et al. (2004)', line=dict(color='blue')))
-                fig_cal.add_trace(go.Scatter(x=centroid_range, y=fe3_line_linear, mode='lines',
-                                             name='2-point calibration', line=dict(color='red', dash='dash')))
-                fig_cal.add_trace(go.Scatter(x=df_all["Centroid"], y=df_all["Fe3+ (%)"],
-                                             mode='markers+text', text=df_all["File"],
-                                             textposition='top center', name='Samples'))
-
-                fig_cal.update_layout(
-                    title="Calibration line (auto 2-point vs Wilke)",
-                    xaxis_title="Centroid (eV)",
-                    yaxis_title="Fe³⁺ (%)",
-                    width=800, height=500
-                )
-                st.plotly_chart(fig_cal, use_container_width=True)
-
+            if not (fe2_mask.any() and fe3_mask.any()):
+                st.warning("自動で kst / iki の両標準が見つかりません。手動選択を使ってください。")
             else:
-                st.warning("標準試料（'kst' または 'iki' を含むファイル名）が見つかりませんでした。")
+                C1 = df_all.loc[fe2_mask, "Centroid"].mean()  # expected Fe3 = 1%
+                C2 = df_all.loc[fe3_mask, "Centroid"].mean()  # expected Fe3 = 93%
+                f1 = 1.0
+                f2 = 93.0
+
+                st.write(f"Detected standards: kst centroid={C1:.3f}, iki centroid={C2:.3f} (targets {f1}%, {f2}%)")
+
+                # ユーザーが ΔC を選べるようにする（-1.0~1.0 eV 範囲など）
+                deltaC = st.slider("Delta C (centroid shift, eV)", min_value=-2.0, max_value=2.0, value=0.0, step=0.001)
+
+                # ΔC に対して a, b を解析的に求める関数
+                def solve_ab_for_delta(delta):
+                    W1 = wilke_fe3(C1 + delta)
+                    W2 = wilke_fe3(C2 + delta)
+                    # 防御: W2 == W1 の場合は a が無限大になる -> 回避
+                    if np.isclose(W2, W1):
+                        return None, None
+                    a = (f2 - f1) / (W2 - W1)
+                    b = f1 - a * W1
+                    return a, b
+
+                a, b = solve_ab_for_delta(deltaC)
+                if a is None:
+                    st.error("Delta C の値で Wilke(C2+Δ)-Wilke(C1+Δ) が 0 に近くなりました。別の Δ を選んでください。")
+                else:
+                    st.write(f"Derived transform: Fe3_new = a*Wilke(C+Δ)+b with a={a:.5g}, b={b:.5g}")
+
+                    # 全データに適用
+                    df_all["Fe3_new(%)"] = a * wilke_fe3(df_all["Centroid"].values + deltaC) + b
+
+                    # 表示する列
+                    cols_to_show = ["File", "Centroid", "Fe3_Wilke(%)", "Fe3_new(%)"]
+                    cols_to_show = [c for c in cols_to_show if c in df_all.columns]
+                    numeric_cols = df_all.select_dtypes(include=np.number).columns
+                    fmt = {col: "{:.3f}" for col in numeric_cols if col in cols_to_show}
+                    st.dataframe(df_all.loc[:, cols_to_show].style.format(fmt))
+
+                    # プロット
+                    centroid_min = df_all["Centroid"].min()
+                    centroid_max = df_all["Centroid"].max()
+                    centroid_range = np.linspace(centroid_min - 0.2, centroid_max + 0.2, 400)
+
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=centroid_range, y=wilke_fe3(centroid_range),
+                                             mode='lines', name='Wilke (orig)', line=dict(color='blue')))
+                    fig.add_trace(go.Scatter(x=centroid_range, y=a * wilke_fe3(centroid_range + deltaC) + b,
+                                             mode='lines', name='Adjusted Wilke (2-pt)', line=dict(color='red', dash='dash')))
+                    # プロット上にサンプル点（new と Wilke を別マーカーで）
+                    fig.add_trace(go.Scatter(x=df_all["Centroid"], y=df_all["Fe3_new(%)"],
+                                             mode='markers+text', text=df_all["File"], textposition='top center',
+                                             name='Samples (new)', marker=dict(color='red', size=8)))
+                    fig.add_trace(go.Scatter(x=df_all["Centroid"], y=df_all["Fe3_Wilke(%)"],
+                                             mode='markers', name='Samples (Wilke)', marker=dict(color='blue', symbol='x', size=8)))
+
+                    fig.update_layout(title="Wilke original vs Adjusted Wilke (2-point constrained)",
+                                      xaxis_title="Centroid (eV)", yaxis_title="Fe3+ (%)",
+                                      width=900, height=520)
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # CSV ダウンロード
+                    csv_buf = io.StringIO()
+                    df_all.to_csv(csv_buf, index=False)
+                    st.download_button("Download calibrated results (CSV)", csv_buf.getvalue(), file_name="calibrated_with_adjusted_wilke.csv", mime="text/csv")
+
+                    # --- Optional: 自动で最適な ΔC を探す ---
+                    if st.button("Auto optimize ΔC to best-fit standards"):
+                        # 目的関数: 両標準点に対する誤差の2乗和（厳密には2点一致させるなら0になるが、
+                        # 安定性のため Wilke の曲線との全体的な整合性を考慮する場合は他の目的関数も可）
+                        def obj(delta):
+                            a_tmp, b_tmp = solve_ab_for_delta(delta)
+                            if a_tmp is None:
+                                return 1e6
+                            # 両標準点での誤差（実際はこの a,b の定義で2点は一致するはず -> 0）
+                            s1 = a_tmp * wilke_fe3(C1 + delta) + b_tmp - f1
+                            s2 = a_tmp * wilke_fe3(C2 + delta) + b_tmp - f2
+                            # + 全データに対する Wilke からの偏差を小さくする項を追加（正則化）
+                            all_err = a_tmp * wilke_fe3(df_all["Centroid"].values + delta) + b_tmp - df_all["Fe3_Wilke(%)"].values
+                            reg = np.mean(all_err**2)
+                            return s1**2 + s2**2 + 0.01 * reg
+
+                        res = minimize(lambda x: obj(x[0]), x0=[0.0], bounds=[(-2.0, 2.0)])
+                        if res.success:
+                            delta_opt = float(res.x[0])
+                            st.success(f"Optimization success: ΔC = {delta_opt:.4f} eV")
+                            # 再計算して再表示（ページをリフレッシュすると反映）
+                            a_opt, b_opt = solve_ab_for_delta(delta_opt)
+                            st.write(f"Optimized a={a_opt:.5g}, b={b_opt:.5g}")
+                            # ここでは簡便のため、計算結果を出力として表示のみ行う。
+                            # 必要なら df_all の列を上書きして再描画も可能。
+                        else:
+                            st.error("Optimization failed.")
 
