@@ -168,7 +168,9 @@ if st.session_state.step1_done:
 
         png_buffers = []
         all_params = []
-        
+
+        st.subheader("Gaussian fitting")
+
         for uploaded_file in uploaded_files:
             try:
                 data=pd.read_csv(uploaded_file, skiprows=3, header=None)
