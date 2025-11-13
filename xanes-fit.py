@@ -377,7 +377,13 @@ if st.session_state.step1_done:
             df_all["Fe3+ (%)"] = df_all["Centroid"].apply(centroid_to_fe3)
 
             numeric_cols = df_all.select_dtypes(include=np.number).columns
-            st.dataframe(df_all.style.format({col: "{:.3f}" for col in numeric_cols}))
+
+            # 指定した行インデックス（存在する範囲でのみ表示）
+            rows_to_show = [0, 1, 2, 3, 10]
+            rows_to_show = [i for i in rows_to_show if i < len(df_all)]  # 範囲外対策
+
+            st.dataframe(df_all.iloc[rows_to_show].style.format({col: "{:.3f}" for col in numeric_cols}))
+
             # Plot: Centroid vs Fe3+
             fig_cal = go.Figure()
             # 検量線プロット
