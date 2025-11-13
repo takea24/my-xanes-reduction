@@ -369,38 +369,59 @@ if st.session_state.step1_done:
         if all_params:
             df_all = pd.DataFrame(all_params)
             
-            # Centroid → Fe3+ calculation
-            def centroid_to_fe3(centroid):
+            # --- (A) 元の関数（参考用） ---
+            def centroid_to_fe3_wilke(centroid):
                 numerator = -0.028 + np.sqrt(0.000784 + 0.00052 * (7112 - centroid))
                 return numerator / -0.00026  # 100倍済み
 
-            df_all["Fe3+ (%)"] = df_all["Centroid"].apply(centroid_to_fe3)
+            df_all["Fe3+_Wilke(%)"] = df_all["Centroid"].apply(centroid_to_fe3_wilke)
 
-            numeric_cols = df_all.select_dtypes(include=np.number).columns
+            # --- (B) 自動で標準試料を探す ---
+            fe2_std = df_all[df_all["File"].str.contains("kst", case=False, na=False)]
+            fe3_std = df_all[df_all["File"].str.contains("iki", case=False, na=False)]
 
-            # 表示したい列だけ指定
-            cols_to_show = ["File", "Centroid", "Error", "Fe3+ (%)"]  # ←例
-            cols_to_show = [c for c in cols_to_show if c in df_all.columns]  # 存在チェック
+            if not fe2_std.empty and not fe3_std.empty:
+                c1 = fe2_std["Centroid"].mean()
+                c2 = fe3_std["Centroid"].mean()
+                fe1, fe2 = 1.0, 93.0
 
-            st.dataframe(df_all.loc[:, cols_to_show].style.format({col: "{:.3f}" for col in numeric_cols if col in cols_to_show}))
+                # --- (C) 線形検量線作成 ---
+                a = (fe2 - fe1) / (c2 - c1)
+                b = fe1 - a * c1
 
-            # Plot: Centroid vs Fe3+
-            fig_cal = go.Figure()
-            # 検量線プロット
-            centroid_range = np.linspace(df_all["Centroid"].min()-0.1, df_all["Centroid"].max()+0.1, 200)
-            fe3_line = centroid_to_fe3(centroid_range)
-            fig_cal.add_trace(go.Scatter(x=centroid_range, y=fe3_line, mode='lines', name='Wilke et al. (2004)', line=dict(color='blue')))
+                def centroid_to_fe3_linear(centroid):
+                    return a * centroid + b
 
-            # サンプル点
-            fig_cal.add_trace(go.Scatter(x=df_all["Centroid"], y=df_all["Fe3+ (%)"],
-                                         mode='markers+text', text=df_all["File"],
-                                         textposition='top center', name='Samples'))
-            
-            fig_cal.update_layout(
-                title="Calibration line & Centroid positions",
-                xaxis_title="Centroid (eV)",
-                yaxis_title="Fe³⁺ (%)",
-                width=800, height=500
-            )
-            st.plotly_chart(fig_cal, use_container_width=True)
+                df_all["Fe3+ (%)"] = df_all["Centroid"].apply(centroid_to_fe3_linear)
+
+                # --- (D) 表示 ---
+                numeric_cols = df_all.select_dtypes(include=np.number).columns
+                cols_to_show = ["File", "Centroid", "Fe3+ (%)", "Fe3+_Wilke(%)"]
+                cols_to_show = [c for c in cols_to_show if c in df_all.columns]
+                st.dataframe(df_all.loc[:, cols_to_show].style.format({col: "{:.3f}" for col in numeric_cols if col in cols_to_show}))
+
+                # --- (E) プロット ---
+                centroid_range = np.linspace(df_all["Centroid"].min()-0.1, df_all["Centroid"].max()+0.1, 200)
+                fe3_line_wilke = centroid_to_fe3_wilke(centroid_range)
+                fe3_line_linear = centroid_to_fe3_linear(centroid_range)
+
+                fig_cal = go.Figure()
+                fig_cal.add_trace(go.Scatter(x=centroid_range, y=fe3_line_wilke, mode='lines',
+                                             name='Wilke et al. (2004)', line=dict(color='blue')))
+                fig_cal.add_trace(go.Scatter(x=centroid_range, y=fe3_line_linear, mode='lines',
+                                             name='2-point calibration', line=dict(color='red', dash='dash')))
+                fig_cal.add_trace(go.Scatter(x=df_all["Centroid"], y=df_all["Fe3+ (%)"],
+                                             mode='markers+text', text=df_all["File"],
+                                             textposition='top center', name='Samples'))
+
+                fig_cal.update_layout(
+                    title="Calibration line (auto 2-point vs Wilke)",
+                    xaxis_title="Centroid (eV)",
+                    yaxis_title="Fe³⁺ (%)",
+                    width=800, height=500
+                )
+                st.plotly_chart(fig_cal, use_container_width=True)
+
+            else:
+                st.warning("標準試料（'kst' または 'iki' を含むファイル名）が見つかりませんでした。")
 
