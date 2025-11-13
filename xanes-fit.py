@@ -159,6 +159,8 @@ elif method=="Analyze Fe-foil file":
 # -----------------------------
 if st.session_state.step1_done:
     st.subheader("Step 2: Multiple File Fitting")
+    st.write("※誤差はfittingパラメータから得られる最低限の誤差で測定誤差を含まない")
+
     uploaded_files = st.file_uploader("Select dat files for fitting", accept_multiple_files=True, type=['dat','txt'])
     if uploaded_files:
         st.write(f"{len(uploaded_files)} files selected.")
