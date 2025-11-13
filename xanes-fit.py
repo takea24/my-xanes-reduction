@@ -290,7 +290,10 @@ if st.session_state.step1_done:
                     value=ylim_default, step=0.01, key=f"ymax_{uploaded_file.name}"
                 )
 
-                ax.set_ylim(0, ylim_max_input)
+                idx_7105 = np.argmin(np.abs(energy - 7105))
+                ymin_7105 = FeKa_norm[idx_7105]
+
+                ax.set_ylim(ymin_7105, ylim_max_input)
                 ax.set_xlabel("Energy (eV)")
                 ax.set_ylabel("Normalized intensity")
                 ax.legend()
@@ -310,9 +313,16 @@ if st.session_state.step1_done:
                 fig_plotly.add_trace(go.Scatter(x=E_plot,y=g2_plot+baseline[mask_plot],mode='lines',name='Gaussian2',line=dict(color='magenta',dash='dash', width=3)))
                 fig_plotly.add_trace(go.Scatter(x=E_plot,y=gauss_fit_plot+baseline[mask_plot],mode='lines',name='Total fit',line=dict(color='blue', width=1)))
                 fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
+                mask_7105 = np.isclose(energy, 7105, atol=0.01)
+                if np.any(mask_7105):
+                    ymin_7105 = FeKa_norm[mask_7105][0]
+                else:
+                    ymin_7105 = 0  # データがなければ0にフォールバック
+
+
                 fig_plotly.update_layout(
                     xaxis=dict(range=[7108,7116]),
-                    yaxis=dict(range=[0, ylim_max_input]),
+                    yaxis=dict(range=[ymin_7105, ylim_max_input]),  # 下限を7105eVの値に
                     title=uploaded_file.name,
                     xaxis_title="Energy (eV)",
                     yaxis_title="Normalized intensity"
