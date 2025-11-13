@@ -212,8 +212,12 @@ if st.session_state.step1_done:
                 p0_gauss=[0.001,7111.8,0.5,0.001,7113.7,0.5]
                 lower=[0,7110,0,0,7112,0]
                 upper=[np.inf,7112,1,np.inf,7114,1]
-                popt,_=curve_fit(two_gauss,E_gauss,I_gauss,p0=p0_gauss,bounds=(lower,upper),maxfev=5000)
-
+                popt, pcov = curve_fit(two_gauss, E_gauss, I_gauss,
+                       p0=p0_gauss, bounds=(lower, upper), maxfev=5000)
+                if pcov is not None:
+                    perr = np.sqrt(np.diag(pcov))
+                else:
+                    perr = np.zeros_like(popt)
                 # パラメータ誤差
                 perr = np.sqrt(np.diag(pcov))  # [A1_err, mu1_err, sigma1_err, A2_err, mu2_err, sigma2_err]
 
@@ -240,15 +244,18 @@ if st.session_state.step1_done:
                 ax.axvline(centroid,color='blue',linestyle=':',label=f'Centroid={centroid:.2f}')
 
                 # Centroid 誤差伝播（簡易）
-                dA1, dmu1, dA2, dmu2 = perr[0], perr[1], perr[3], perr[4]
-                numerator = A1*mu1 + A2*mu2
-                denominator = A1 + A2
-                d_centroid = np.sqrt(
-                    ((mu1*denominator - numerator)/(denominator**2) * dA1)**2 +
-                    (A1/denominator * dmu1)**2 +
-                    ((mu2*denominator - numerator)/(denominator**2) * dA2)**2 +
-                    (A2/denominator * dmu2)**2
-                )
+                if pcov is not None:
+                    dA1, dmu1, dA2, dmu2 = perr[0], perr[1], perr[3], perr[4]
+                    numerator = A1*mu1 + A2*mu2
+                    denominator = A1 + A2
+                    d_centroid = np.sqrt(
+                        ((mu1*denominator - numerator)/(denominator**2) * dA1)**2 +
+                        (A1/denominator * dmu1)**2 +
+                        ((mu2*denominator - numerator)/(denominator**2) * dA2)**2 +
+                        (A2/denominator * dmu2)**2
+                    )
+                else:
+                    d_centroid = np.nan
 
                 # 軸設定
                 ax.set_xlim(7108,7116)
