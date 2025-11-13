@@ -238,7 +238,7 @@ if st.session_state.step1_done:
 
                 # 軸設定
                 ax.set_xlim(7108,7116)
-                mask_ylim=(energy>=7114)&(energy<=7116)
+                mask_ylim=(energy>=7112)&(energy<=7116)
                 ylim_max=np.ceil(FeKa_smooth[mask_ylim].max()/0.01)*0.01
                 ax.set_ylim(0,ylim_max)
                 ax.set_xlabel("Energy (eV)")
