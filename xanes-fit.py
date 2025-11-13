@@ -167,6 +167,10 @@ if st.session_state.step1_done:
         bg_low = st.number_input("Lower background limit (eV, ≤)", value=7110.0, step=0.01)
         bg_high = st.number_input("Upper background limit (eV, ≥)", value=7114.0, step=0.01)
 
+        st.subheader("Post-edge normalization settings")
+        post_edge_min = st.number_input("Post-edge normalization min (eV)", value=7160.0, step=0.01)
+        post_edge_max = st.number_input("Post-edge normalization max (eV)", value=7200.0, step=0.01)
+
         png_buffers = []
         all_params = []
 
@@ -184,8 +188,6 @@ if st.session_state.step1_done:
                 FeKa_raw = FeKa / I0
 
                 # Post-edge 領域平均を1に規格化
-                post_edge_min = 7160.0  # ポストピークの下限 (eV)
-                post_edge_max = 7200.0  # ポストピークの上限 (eV)
                 mask_post = (energy >= post_edge_min) & (energy <= post_edge_max)
                 post_mean = np.mean(FeKa_raw[mask_post])
                 FeKa_norm = FeKa_raw / post_mean
