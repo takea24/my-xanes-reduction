@@ -239,8 +239,14 @@ if st.session_state.step1_done:
                 # 軸設定
                 ax.set_xlim(7108,7116)
                 mask_ylim=(energy>=7112)&(energy<=7116)
-                ylim_max=np.ceil(FeKa_smooth[mask_ylim].max()/0.01)*0.01
-                ax.set_ylim(0,ylim_max)
+                ylim_default = np.ceil(FeKa_smooth[mask_ylim].max()/0.01)*0.01
+
+                ylim_max_input = st.number_input(
+                    f"{uploaded_file.name} Y-axis max", 
+                    value=ylim_default, step=0.01, key=f"ymax_{uploaded_file.name}"
+                )
+
+                ax.set_ylim(0, ylim_max_input)
                 ax.set_xlabel("Energy (eV)")
                 ax.set_ylabel("Normalized intensity")
                 ax.legend()
@@ -262,7 +268,7 @@ if st.session_state.step1_done:
                 fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
                 fig_plotly.update_layout(
                     xaxis=dict(range=[7108,7116]),
-                    yaxis=dict(range=[0,ylim_max]),
+                    yaxis=dict(range=[0, ylim_max_input]),
                     title=uploaded_file.name,
                     xaxis_title="Energy (eV)",
                     yaxis_title="Normalized intensity"
