@@ -210,7 +210,7 @@ if st.session_state.step1_done:
                 poly_bg = np.polyval(coeff_poly, energy)
 
                 # Voigt: 7116–7140 eV
-                mask_voigt = (energy >= 7116) & (energy <= 7128)
+                mask_voigt = (energy >= 7115) & (energy <= 7120)
                 p0_voigt = [7125, 0.5, 0.5, 1.0]
                 try:
                     params_voigt, _ = curve_fit(voigt, energy[mask_voigt], FeKa_smooth[mask_voigt],
