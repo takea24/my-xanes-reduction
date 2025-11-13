@@ -189,8 +189,12 @@ if st.session_state.step1_done:
 
                 # Post-edge 領域平均を1に規格化
                 mask_post = (energy >= post_edge_min) & (energy <= post_edge_max)
+                if np.sum(mask_post) == 0:
+                    st.warning(f"{uploaded_file.name}: No data in post-edge range. Skipping.")
+                    continue
                 post_mean = np.mean(FeKa_raw[mask_post])
                 FeKa_norm = FeKa_raw / post_mean
+
 
                 # スムージング
                 FeKa_smooth = gaussian_filter1d(FeKa_norm, sigma=1)
@@ -373,7 +377,7 @@ if st.session_state.step1_done:
                 )
 
             fig_overlay.update_layout(
-                title="Normalized XANES spectra overlay",
+                title=f"Normalized XANES spectra overlay (post-edge {post_edge_min}-{post_edge_max} eV)",
                 xaxis_title="Energy (eV)",
                 yaxis_title="Normalized intensity (post-peak avg = 1)",
                 width=900, height=500
