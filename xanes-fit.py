@@ -221,53 +221,53 @@ if st.session_state.step1_done:
                 area1 = popt[0]*popt[2]*np.sqrt(2*np.pi)
                 area2 = popt[3]*popt[5]*np.sqrt(2*np.pi)
                 centroid = (popt[1]*area1 + popt[4]*area2)/(area1+area2)
+                
+                # 描画用マスク（7116まで）
+                mask_plot = (energy >= 7110) & (energy <= 7116)
+                E_plot = energy[mask_plot]
 
-                # Matplotlib
+                # Matplotlib描画
                 fig_mpl, ax = plt.subplots(figsize=(10,6), constrained_layout=True)
                 ax.plot(energy, FeKa_norm, 'ko', alpha=0.5, label='raw')
                 ax.plot(energy, FeKa_smooth, 'k-', alpha=0.8, label='smoothed')
                 ax.plot(energy, baseline, 'r--', linewidth=2, label='baseline')
-                g1 = gaussian(E_gauss,popt[0],popt[1],popt[2])
-                g2 = gaussian(E_gauss,popt[3],popt[4],popt[5])
-                ax.plot(E_gauss,g1+baseline[mask_gauss],'g--',linewidth=3,label='Gaussian1')
-                ax.plot(E_gauss,g2+baseline[mask_gauss],'m--',linewidth=3,label='Gaussian2')
-                ax.plot(E_gauss,gauss_fit+baseline[mask_gauss],'b-',linewidth=1,label='Total fit')
-                ax.axvline(centroid,color='blue',linestyle=':',label=f'Centroid={centroid:.2f}')
-                mask_ylim=(energy>=7114)&(energy<=7116)
-                ylim_max=np.ceil(FeKa_smooth[mask_ylim].max()/0.01)*0.01
-                ax.set_xlim(7108,7116)
-                ax.set_ylim(0,ylim_max)
+
+                # Fitting結果を描画（描画用マスクで広げる）
+                g1_plot = gaussian(E_plot, popt[0], popt[1], popt[2])
+                g2_plot = gaussian(E_plot, popt[3], popt[4], popt[5])
+                ax.plot(E_plot, g1_plot + baseline[mask_plot], 'g--', linewidth=3, label='Gaussian1')
+                ax.plot(E_plot, g2_plot + baseline[mask_plot], 'm--', linewidth=3, label='Gaussian2')
+                ax.plot(E_plot, g1_plot + g2_plot + baseline[mask_plot], 'b-', linewidth=1, label='Total fit')
+
+                # Centroid線
+                ax.axvline(centroid, color='blue', linestyle=':', label=f'Centroid={centroid:.2f}')
+
+                # 軸設定
+                ax.set_xlim(7108, 7116)
+                mask_ylim = (energy >= 7114) & (energy <= 7116)
+                ylim_max = np.ceil(FeKa_smooth[mask_ylim].max()/0.01)*0.01
+                ax.set_ylim(0, ylim_max)
                 ax.set_xlabel("Energy (eV)")
                 ax.set_ylabel("Normalized intensity")
                 ax.legend()
 
-                png_buffer=io.BytesIO()
-                fig_mpl.savefig(png_buffer,dpi=300)
-                png_buffer.seek(0)
-                png_buffers.append((uploaded_file.name,png_buffer))
-                plt.close(fig_mpl)
-
-                # Plotly
-                fig_plotly=go.Figure()
-                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_norm,mode='markers',name='raw',marker=dict(color='black',opacity=0.5)))
-                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_smooth,mode='lines',name='smoothed',line=dict(color='gray')))
-                fig_plotly.add_trace(go.Scatter(x=energy,y=baseline,mode='lines',name='baseline',line=dict(color='red',dash='dash')))
-                # Gaussians
-                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g1+baseline[mask_gauss],mode='lines',name='Gaussian1',line=dict(color='green',dash='dash', width=3)))
-                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=g2+baseline[mask_gauss],mode='lines',name='Gaussian2',line=dict(color='magenta',dash='dash', width=3)))
-                fig_plotly.add_trace(go.Scatter(x=E_gauss,y=gauss_fit+baseline[mask_gauss],mode='lines',name='Total fit',line=dict(color='blue', width=1)))
-                # パルスリファレンス表示など不要
-                fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
+                # Plotly描画も同様にmask_plotを使用
+                fig_plotly = go.Figure()
+                fig_plotly.add_trace(go.Scatter(x=energy, y=FeKa_norm, mode='markers', name='raw', marker=dict(color='black', opacity=0.5)))
+                fig_plotly.add_trace(go.Scatter(x=energy, y=FeKa_smooth, mode='lines', name='smoothed', line=dict(color='gray')))
+                fig_plotly.add_trace(go.Scatter(x=energy, y=baseline, mode='lines', name='baseline', line=dict(color='red', dash='dash')))
+                fig_plotly.add_trace(go.Scatter(x=E_plot, y=g1_plot + baseline[mask_plot], mode='lines', name='Gaussian1', line=dict(color='green', dash='dash', width=3)))
+                fig_plotly.add_trace(go.Scatter(x=E_plot, y=g2_plot + baseline[mask_plot], mode='lines', name='Gaussian2', line=dict(color='magenta', dash='dash', width=3)))
+                fig_plotly.add_trace(go.Scatter(x=E_plot, y=g1_plot + g2_plot + baseline[mask_plot], mode='lines', name='Total fit', line=dict(color='blue', width=1)))
+                fig_plotly.add_vline(x=centroid, line=dict(color='blue', dash='dot'), annotation_text=f"Centroid={centroid:.2f}", annotation_position="top right")
                 fig_plotly.update_layout(
-                    xaxis=dict(range=[7108,7116]),
-                    yaxis=dict(range=[0,ylim_max]),
+                    xaxis=dict(range=[7108, 7116]),
+                    yaxis=dict(range=[0, ylim_max]),
                     title=uploaded_file.name,
                     xaxis_title="Energy (eV)",
                     yaxis_title="Normalized intensity"
                 )
-                st.plotly_chart(fig_plotly,use_container_width=True)
-
-
+                st.plotly_chart(fig_plotly, use_container_width=True)
                 # Matplotlib保存ボタン
 
                 st.download_button(f"グラフ個別Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
