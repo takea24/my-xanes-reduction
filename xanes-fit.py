@@ -1,4 +1,4 @@
-# xanes-fit-with-pulseref.py (完全版改良)
+# xanes-fit-with-pulseref.py (描画範囲拡大版)
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -99,7 +99,6 @@ def find_zero_crossing(p, d2, search_min):
 # -----------------------------
 st.title("XANES Multiple File Fitting with Pulse Reference ver1.0")
 
-# Step state
 if "step1_done" not in st.session_state:
     st.session_state.step1_done = False
 
@@ -139,18 +138,7 @@ elif method=="Analyze Fe-foil file":
         fig.add_trace(go.Scatter(x=pulse[mask], y=mu_s[mask], mode='lines', name='smoothed', line=dict(color='gray')))
         fig.add_trace(go.Scatter(x=pulse[mask], y=d2[mask], mode='lines', name='d2', line=dict(dash='dash'), yaxis='y2'))
 
-        # 第二軸 y=0 水平線
-        fig.add_shape(
-            type="line",
-            x0=pulse[mask].min(),
-            x1=pulse[mask].max(),
-            y0=0,
-            y1=0,
-            yref="y2",
-            line=dict(color="blue", dash="dot")
-        )
-
-        # パルスリファレンス縦線
+        fig.add_shape(type="line", x0=pulse[mask].min(), x1=pulse[mask].max(), y0=0, y1=0, yref="y2", line=dict(color="blue", dash="dot"))
         fig.add_vline(x=pulse_ref, line=dict(color='red', dash='dash'))
 
         fig.update_layout(
@@ -174,8 +162,6 @@ if st.session_state.step1_done:
     uploaded_files = st.file_uploader("Select dat files for fitting", accept_multiple_files=True, type=['dat','txt'])
     if uploaded_files:
         st.write(f"{len(uploaded_files)} files selected.")
-
-        # Step2のみベースライン入力フォーム
         st.subheader("Baseline selection (manual input)")
         bg_low = st.number_input("Lower background limit (eV, ≤)", value=7110.0, step=0.01)
         bg_high = st.number_input("Upper background limit (eV, ≥)", value=7114.0, step=0.01)
@@ -208,7 +194,7 @@ if st.session_state.step1_done:
                 c_lin=I_low - m_lin*E_low
                 baseline = m_lin*energy+c_lin
 
-                # Gauss fitting
+                # Gauss fitting (範囲 7110-7115)
                 mask_gauss=(energy>=7110)&(energy<=7115)
                 E_gauss=energy[mask_gauss]
                 I_gauss=FeKa_smooth[mask_gauss]-baseline[mask_gauss]
@@ -216,69 +202,68 @@ if st.session_state.step1_done:
                 lower=[0,7110,0,0,7112,0]
                 upper=[np.inf,7112,2,np.inf,7115,2]
                 popt,_=curve_fit(two_gauss,E_gauss,I_gauss,p0=p0_gauss,bounds=(lower,upper),maxfev=5000)
-                gauss_fit=two_gauss(E_gauss,*popt)
 
-                area1 = popt[0]*popt[2]*np.sqrt(2*np.pi)
-                area2 = popt[3]*popt[5]*np.sqrt(2*np.pi)
-                centroid = (popt[1]*area1 + popt[4]*area2)/(area1+area2)
-                
-                # 描画用マスク（7116まで）
-                mask_plot = (energy >= 7110) & (energy <= 7116)
+                # 描画用マスク（7110-7116）
+                mask_plot = (energy>=7110)&(energy<=7116)
                 E_plot = energy[mask_plot]
+                g1_plot = gaussian(E_plot,popt[0],popt[1],popt[2])
+                g2_plot = gaussian(E_plot,popt[3],popt[4],popt[5])
+                gauss_fit_plot = g1_plot + g2_plot
 
-                # Matplotlib描画
+                # Matplotlib
                 fig_mpl, ax = plt.subplots(figsize=(10,6), constrained_layout=True)
                 ax.plot(energy, FeKa_norm, 'ko', alpha=0.5, label='raw')
                 ax.plot(energy, FeKa_smooth, 'k-', alpha=0.8, label='smoothed')
                 ax.plot(energy, baseline, 'r--', linewidth=2, label='baseline')
-
-                # Fitting結果を描画（描画用マスクで広げる）
-                g1_plot = gaussian(E_plot, popt[0], popt[1], popt[2])
-                g2_plot = gaussian(E_plot, popt[3], popt[4], popt[5])
                 ax.plot(E_plot, g1_plot + baseline[mask_plot], 'g--', linewidth=3, label='Gaussian1')
                 ax.plot(E_plot, g2_plot + baseline[mask_plot], 'm--', linewidth=3, label='Gaussian2')
-                ax.plot(E_plot, g1_plot + g2_plot + baseline[mask_plot], 'b-', linewidth=1, label='Total fit')
+                ax.plot(E_plot, gauss_fit_plot + baseline[mask_plot], 'b-', linewidth=1, label='Total fit')
 
-                # Centroid線
-                ax.axvline(centroid, color='blue', linestyle=':', label=f'Centroid={centroid:.2f}')
+                # Centroid
+                area1 = popt[0]*popt[2]*np.sqrt(2*np.pi)
+                area2 = popt[3]*popt[5]*np.sqrt(2*np.pi)
+                centroid = (popt[1]*area1 + popt[4]*area2)/(area1+area2)
+                ax.axvline(centroid,color='blue',linestyle=':',label=f'Centroid={centroid:.2f}')
 
                 # 軸設定
-                ax.set_xlim(7108, 7116)
-                mask_ylim = (energy >= 7114) & (energy <= 7116)
-                ylim_max = np.ceil(FeKa_smooth[mask_ylim].max()/0.01)*0.01
-                ax.set_ylim(0, ylim_max)
+                ax.set_xlim(7108,7116)
+                mask_ylim=(energy>=7114)&(energy<=7116)
+                ylim_max=np.ceil(FeKa_smooth[mask_ylim].max()/0.01)*0.01
+                ax.set_ylim(0,ylim_max)
                 ax.set_xlabel("Energy (eV)")
                 ax.set_ylabel("Normalized intensity")
                 ax.legend()
 
-                # Plotly描画も同様にmask_plotを使用
-                fig_plotly = go.Figure()
-                fig_plotly.add_trace(go.Scatter(x=energy, y=FeKa_norm, mode='markers', name='raw', marker=dict(color='black', opacity=0.5)))
-                fig_plotly.add_trace(go.Scatter(x=energy, y=FeKa_smooth, mode='lines', name='smoothed', line=dict(color='gray')))
-                fig_plotly.add_trace(go.Scatter(x=energy, y=baseline, mode='lines', name='baseline', line=dict(color='red', dash='dash')))
-                fig_plotly.add_trace(go.Scatter(x=E_plot, y=g1_plot + baseline[mask_plot], mode='lines', name='Gaussian1', line=dict(color='green', dash='dash', width=3)))
-                fig_plotly.add_trace(go.Scatter(x=E_plot, y=g2_plot + baseline[mask_plot], mode='lines', name='Gaussian2', line=dict(color='magenta', dash='dash', width=3)))
-                fig_plotly.add_trace(go.Scatter(x=E_plot, y=g1_plot + g2_plot + baseline[mask_plot], mode='lines', name='Total fit', line=dict(color='blue', width=1)))
-                fig_plotly.add_vline(x=centroid, line=dict(color='blue', dash='dot'), annotation_text=f"Centroid={centroid:.2f}", annotation_position="top right")
+                png_buffer=io.BytesIO()
+                fig_mpl.savefig(png_buffer,dpi=300)
+                png_buffer.seek(0)
+                png_buffers.append((uploaded_file.name,png_buffer))
+                plt.close(fig_mpl)
+
+                # Plotly
+                fig_plotly=go.Figure()
+                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_norm,mode='markers',name='raw',marker=dict(color='black',opacity=0.5)))
+                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_smooth,mode='lines',name='smoothed',line=dict(color='gray')))
+                fig_plotly.add_trace(go.Scatter(x=energy,y=baseline,mode='lines',name='baseline',line=dict(color='red',dash='dash')))
+                fig_plotly.add_trace(go.Scatter(x=E_plot,y=g1_plot+baseline[mask_plot],mode='lines',name='Gaussian1',line=dict(color='green',dash='dash', width=3)))
+                fig_plotly.add_trace(go.Scatter(x=E_plot,y=g2_plot+baseline[mask_plot],mode='lines',name='Gaussian2',line=dict(color='magenta',dash='dash', width=3)))
+                fig_plotly.add_trace(go.Scatter(x=E_plot,y=gauss_fit_plot+baseline[mask_plot],mode='lines',name='Total fit',line=dict(color='blue', width=1)))
+                fig_plotly.add_vline(x=centroid,line=dict(color='blue',dash='dot'),annotation_text=f"Centroid={centroid:.2f}",annotation_position="top right")
                 fig_plotly.update_layout(
-                    xaxis=dict(range=[7108, 7116]),
-                    yaxis=dict(range=[0, ylim_max]),
+                    xaxis=dict(range=[7108,7116]),
+                    yaxis=dict(range=[0,ylim_max]),
                     title=uploaded_file.name,
                     xaxis_title="Energy (eV)",
                     yaxis_title="Normalized intensity"
                 )
-                st.plotly_chart(fig_plotly, use_container_width=True)
-                # Matplotlib保存ボタン
+                st.plotly_chart(fig_plotly,use_container_width=True)
 
                 st.download_button(f"グラフ個別Download {uploaded_file.name} PNG", png_buffer, file_name=f"{uploaded_file.name}_fitting.png")
 
-
-
-                # popt = [A1, mu1, sigma1, A2, mu2, sigma2]
+                # パラメータ計算
                 A1, mu1, sigma1, A2, mu2, sigma2 = popt
                 FWHM1 = 2.35482 * sigma1
                 FWHM2 = 2.35482 * sigma2
-
                 df = pd.DataFrame(
                     {
                         "Gaussian 1": [A1, mu1, sigma1, FWHM1, area1],
@@ -286,11 +271,9 @@ if st.session_state.step1_done:
                     },
                     index=["Height A", "Center μ (eV)", "σ", "FWHM", "Area"]
                 )
-
                 st.dataframe(df.style.format("{:.5g}"))
                 st.write(f"**Centroid** = {centroid:.4f} eV")
                       
-                # 追加：全体パラメータに保存
                 all_params.append({
                     "File": uploaded_file.name,
                     "Centroid": centroid,
@@ -304,29 +287,24 @@ if st.session_state.step1_done:
                     "Gaussian2_FWHM": FWHM2
                 })
 
-
             except Exception as e:
                 st.error(f"Error processing {uploaded_file.name}: {e}")
 
-        # ループ終了後
+        # Summary
         if all_params:
             df_all = pd.DataFrame(all_params)
             st.subheader("Summary of all fittings")
             st.dataframe(df_all)
-
-            # CSV/TXT保存用
             csv_buffer = io.StringIO()
             df_all.to_csv(csv_buffer, index=False)
-            csv_str = csv_buffer.getvalue()  # <- ここで定義済み
             st.download_button(
                 "Download all fitting parameters (CSV/TXT)",
-                data=csv_str,
+                data=csv_buffer.getvalue(),
                 file_name="all_fitting_parameters.csv",
                 mime="text/csv"
             )
 
-
-        # ZIP一括ダウンロード
+        # ZIP一括
         if png_buffers:
             zip_buffer=io.BytesIO()
             with zipfile.ZipFile(zip_buffer,"w") as zf:
@@ -334,4 +312,3 @@ if st.session_state.step1_done:
                     zf.writestr(f"{name}_fitting.png", buf.getvalue())
             zip_buffer.seek(0)
             st.download_button("Download all PNGgraphs as ZIP", zip_buffer, file_name="all_fittings.zip")
-             
