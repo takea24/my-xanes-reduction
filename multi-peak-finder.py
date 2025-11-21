@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from scipy.signal import find_peaks, savgol_filter
+from scipy.signal import find_peaks, savgol_filter, medfilt
 from scipy.ndimage import gaussian_filter1d, grey_opening
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
@@ -16,6 +16,14 @@ uploaded_files = st.file_uploader(
     type=["txt"],
     accept_multiple_files=True
 )
+
+# --- スパイク除去 ---
+do_despike = st.checkbox("Spike removal (median filter)")
+if do_despike:
+    k = st.slider("Median filter kernel size (odd)", 3, 21, 5, step=2)
+
+# --- 規格化 ---
+do_norm = st.checkbox("Normalize before BG subtraction", value=True)
 
 # --- スムージングオプション ---
 smooth_method = st.selectbox("Smoothing method", ["None", "Gaussian", "Savitzky-Golay"])
@@ -51,8 +59,7 @@ if uploaded_files:
                 df_raw = pd.read_csv(uploaded_file, sep=None, header=None, engine='python', dtype=str)
                 def is_numeric_row(row):
                     try:
-                        float(row[0])
-                        float(row[1])
+                        float(row[0]); float(row[1])
                         return True
                     except:
                         return False
@@ -68,15 +75,26 @@ if uploaded_files:
             x = df.iloc[:,0].values
             y = df.iloc[:,1].values
 
+            # --- スパイク除去 ---
+            if do_despike:
+                y_proc = medfilt(y, kernel_size=k)
+            else:
+                y_proc = y.copy()
+
+            # --- 規格化 ---
+            if do_norm:
+                ymin, ymax = np.min(y_proc), np.max(y_proc)
+                if ymax - ymin != 0:
+                    y_proc = (y_proc - ymin) / (ymax - ymin)
+
             # --- スムージング ---
             if smooth_method == "Gaussian":
-                y_smooth = gaussian_filter1d(y, sigma=sigma)
+                y_smooth = gaussian_filter1d(y_proc, sigma=sigma)
             elif smooth_method == "Savitzky-Golay":
-                if window % 2 == 0:
-                    window += 1
-                y_smooth = savgol_filter(y, window_length=window, polyorder=poly)
+                if window % 2 == 0: window += 1
+                y_smooth = savgol_filter(y_proc, window_length=window, polyorder=poly)
             else:
-                y_smooth = y
+                y_smooth = y_proc
 
             # --- 背景差し引き ---
             if do_bg_sub:
@@ -90,7 +108,6 @@ if uploaded_files:
             peak_kwargs = {"distance": distance}
             if height > 0: peak_kwargs["height"] = height
             if prominence > 0: peak_kwargs["prominence"] = prominence
-
             peaks_idx, properties = find_peaks(y_corrected, **peak_kwargs)
             peaks_x = x[peaks_idx]
             peaks_y = y_corrected[peaks_idx]
@@ -105,8 +122,7 @@ if uploaded_files:
                 fig.add_trace(go.Scatter(x=x, y=y_corrected, mode="lines", name="Corrected", line=dict(color="orange")))
             if show_peaks:
                 fig.add_trace(go.Scatter(
-                    x=peaks_x,
-                    y=peaks_y,
+                    x=peaks_x, y=peaks_y,
                     mode="markers+text",
                     text=[f"{px:.2f}" for px in peaks_x],
                     textposition="top center",
@@ -118,12 +134,9 @@ if uploaded_files:
 
             # --- MatplotlibでPNG保存 ---
             fig_mat, ax = plt.subplots()
-            if show_original:
-                ax.plot(x, y, label="Original")
-            if do_bg_sub and show_background:
-                ax.plot(x, y_bg, "g--", label="Background")
-            if show_corrected:
-                ax.plot(x, y_corrected, "orange", label="Corrected")
+            if show_original: ax.plot(x, y, label="Original")
+            if do_bg_sub and show_background: ax.plot(x, y_bg, "g--", label="Background")
+            if show_corrected: ax.plot(x, y_corrected, "orange", label="Corrected")
             if show_peaks:
                 ax.plot(peaks_x, peaks_y, "rx", label="Peaks")
                 for px, py in zip(peaks_x, peaks_y):
