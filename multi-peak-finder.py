@@ -36,12 +36,12 @@ elif smooth_method == "Savitzky-Golay":
 # --- 背景差し引き ---
 do_bg_sub = st.checkbox("Background subtraction (rolling ball)")
 if do_bg_sub:
-    r = st.slider("Background subtraction radius", 1, 100, 50)
+    r = st.slider("Background subtraction radius", 1, 1000, 500)
 
 # --- ピーク検出パラメータ ---
 distance = st.slider("Minimum peak distance", 1, 50, 5)
-height = st.number_input("Minimum peak height (optional, leave 0 to ignore)", value=0.01)
-prominence = st.number_input("Minimum peak prominence (optional, leave 0 to ignore)", value=0.01)
+height = st.number_input("Minimum peak height (optional, leave 0 to ignore)", value=0.1)
+prominence = st.number_input("Minimum peak prominence (optional, leave 0 to ignore)", value=0.05)
 
 # --- 表示する要素を選択 ---
 show_original = st.checkbox("Show original", value=True)
