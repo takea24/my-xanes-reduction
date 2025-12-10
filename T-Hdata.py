@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import io
 
 st.title("温湿度データ整理アプリ（30分丸め & ロガー名元列名保持）")
 
@@ -19,7 +20,7 @@ for file in uploaded_files:
     st.write(f"---\n### 📄 読み込み：{file.name}")
 
     # 列名の自動変更を防ぐ
-    df = pd.read_excel(file, header=1, mangle_dupe_cols=False)
+    df = pd.read_excel(io.BytesIO(file.read()), header=1)
     cols = df.columns.tolist()
     st.write("列名:", cols)
 
