@@ -1,57 +1,47 @@
 import streamlit as st
 import pandas as pd
 
-st.title("温湿度データ統合＆クレンジングツール")
+st.title("Temperature & Humidity Data")
 
-uploaded_files = st.file_uploader(
-    "温湿度データ（複数可: Excel or CSV）をアップロード",
-    accept_multiple_files=True
-)
+uploaded_file = st.file_uploader("ファイルをアップロード (Excel or CSV)")
 
-if uploaded_files:
-    dfs = []
+if uploaded_file:
+    # ファイル読み込み
+    if uploaded_file.name.endswith(".csv"):
+        df = pd.read_csv(uploaded_file)
+    else:
+        df = pd.read_excel(uploaded_file, engine="openpyxl")
 
-    for uploaded_file in uploaded_files:
+    st.subheader("元データ（先頭）")
+    st.write(df.head())
 
-        # ファイル形式判定
-        if uploaded_file.name.endswith(".csv"):
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_excel(uploaded_file, engine="openpyxl")
+    # ---- ここから追加部分 ----
+    # 列名の候補（あなたのデータに合わせる）
+    temp_cols = ["温度", "Temperature", "Temp"]
+    hum_cols  = ["湿度", "Humidity", "Hum"]
 
-        # 列名候補（あなたのデータから推測）
-        temp_cols = ["温度", "Temperature", "Temp"]
-        hum_cols = ["湿度", "Humidity", "Hum"]
+    # 実際に存在する列を探す
+    temp_col = next((c for c in temp_cols if c in df.columns), None)
+    hum_col  = next((c for c in hum_cols if c in df.columns), None)
 
-        # 実際の列名を探す
-        temp_col = next((c for c in temp_cols if c in df.columns), None)
-        hum_col = next((c for c in hum_cols if c in df.columns), None)
-
-        if temp_col is None or hum_col is None:
-            st.error(f"{uploaded_file.name} に温度/湿度の列が見つかりません。")
-            continue
-
-        # 数値に変換（変な文字が来たら NaN にする）
+    if temp_col is None or hum_col is None:
+        st.error("温度または湿度の列が見つかりません。列名を確認してください。")
+    else:
+        # 数値化（文字列があれば NaN に）
         df[temp_col] = pd.to_numeric(df[temp_col], errors="coerce")
-        df[hum_col] = pd.to_numeric(df[hum_col], errors="coerce")
+        df[hum_col]  = pd.to_numeric(df[hum_col], errors="coerce")
 
-        # ✔ 温湿度のどちらかが欠損なら、そのロガーの行だけ削除
+        # ✔ 欠損値がある行だけ除去（ロガーの行を飛ばす）
         df_clean = df.dropna(subset=[temp_col, hum_col])
 
-        dfs.append(df_clean)
+        st.subheader("欠損行を除外したデータ")
+        st.write(df_clean.head())
 
-    # ファイルの統合
-    if len(dfs) > 0:
-        df_all = pd.concat(dfs, ignore_index=True)
-
-        st.success("データを統合し、欠損のあるロガーの行を削除しました。")
-        st.write(df_all.head())
-
-        # ダウンロードリンク作成
-        csv = df_all.to_csv(index=False).encode("utf-8")
+        # ダウンロードボタン（必要なら）
+        csv = df_clean.to_csv(index=False).encode("utf-8")
         st.download_button(
-            "統合データをCSVでダウンロード",
+            "欠損を除外したCSVをダウンロード",
             csv,
-            "merged_TH_data.csv",
+            "cleaned_data.csv",
             "text/csv"
         )
