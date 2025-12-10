@@ -68,3 +68,28 @@ if uploaded_files:
 
     else:
         st.error("データがありません。Excel ファイルの形式を確認してください。")
+
+
+st.write("湿度ブロック shape:", hum_block.shape)
+st.write("温度ブロック shape:", tem_block.shape)
+st.write(hum_block.head())
+st.write(tem_block.head())
+
+st.write("hum_long shape:", hum_long.shape)
+st.write("tem_long shape:", tem_long.shape)
+st.write(hum_long.head())
+st.write(tem_long.head())
+
+st.write("丸め後 hum_long unique times:", hum_long["Time"].unique()[:20])
+st.write("丸め後 tem_long unique times:", tem_long["Time"].unique()[:20])
+
+st.write("湿度側 Logger:", hum_long["Logger"].unique())
+st.write("温度側 Logger:", tem_long["Logger"].unique())
+
+
+test_merge = pd.merge(hum_long, tem_long, on=["Time", "Logger"], how="inner")
+st.write("merge 結果 shape:", test_merge.shape)
+st.write(test_merge.head())
+
+
+
