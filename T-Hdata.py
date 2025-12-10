@@ -54,8 +54,9 @@ if uploaded_files:
         hum_long["Time"] = pd.to_datetime(hum_long["Time"], errors="coerce")
         tem_long["Time"] = pd.to_datetime(tem_long["Time"], errors="coerce")
 
-        hum_long["Logger"] = hum_long["Logger"].astype(str).strip()
-        tem_long["Logger"] = tem_long["Logger"].astype(str).strip()
+        hum_long["Logger"] = hum_long["Logger"].astype(str).str.strip()
+        tem_long["Logger"] = tem_long["Logger"].astype(str).str.strip()
+
 
         hum_long["Humidity"] = pd.to_numeric(hum_long["Humidity"], errors="coerce")
         tem_long["Temperature"] = pd.to_numeric(tem_long["Temperature"], errors="coerce")
