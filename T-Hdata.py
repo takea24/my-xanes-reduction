@@ -1,47 +1,91 @@
 import streamlit as st
 import pandas as pd
+import io
 
-st.title("Temperature & Humidity Data")
+st.title("博物館 温湿度データ 統合ツール（Streamlit版）")
+st.write("月ごとの Excel ファイルを複数アップロードすると、年間通した縦長データに統合します。")
 
-uploaded_file = st.file_uploader("ファイルをアップロード (Excel or CSV)")
+uploaded_files = st.file_uploader("Excel ファイルを月ごとにアップロード", type=["xlsx"], accept_multiple_files=True)
 
-if uploaded_file:
-    # ファイル読み込み
-    if uploaded_file.name.endswith(".csv"):
-        df = pd.read_csv(uploaded_file)
-    else:
-        df = pd.read_excel(uploaded_file, engine="openpyxl")
+if uploaded_files:
+    all_data = []
 
-    st.subheader("元データ（先頭）")
-    st.write(df.head())
+    for uploaded_file in uploaded_files:
+        st.write(f"処理中: {uploaded_file.name}")
 
-    # ---- ここから追加部分 ----
-    # 列名の候補（あなたのデータに合わせる）
-    temp_cols = ["温度", "Temperature", "Temp"]
-    hum_cols  = ["湿度", "Humidity", "Hum"]
+        # Excel 読み込み
+        df = pd.read_excel(uploaded_file)
 
-    # 実際に存在する列を探す
-    temp_col = next((c for c in temp_cols if c in df.columns), None)
-    hum_col  = next((c for c in hum_cols if c in df.columns), None)
+        # datetime 列を設定
+        if "Unnamed: 1" in df.columns:
+            df = df.rename(columns={"Unnamed: 1": "datetime"})
+        else:
+            st.error(f"{uploaded_file.name}: datetime 列（Unnamed: 1）が見つかりません")
+            continue
 
-    if temp_col is None or hum_col is None:
-        st.error("温度または湿度の列が見つかりません。列名を確認してください。")
-    else:
-        # 数値化（文字列があれば NaN に）
-        df[temp_col] = pd.to_numeric(df[temp_col], errors="coerce")
-        df[hum_col]  = pd.to_numeric(df[hum_col], errors="coerce")
+        # datetime を変換
+        df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
 
-        # ✔ 欠損値がある行だけ除去（ロガーの行を飛ばす）
-        df_clean = df.dropna(subset=[temp_col, hum_col])
+        # センサー名が含まれる 1 行目を抽出
+        header = df.iloc[0]
 
-        st.subheader("欠損行を除外したデータ")
-        st.write(df_clean.head())
+        # データ本体（1行目を削除）
+        df = df.drop(0)
 
-        # ダウンロードボタン（必要なら）
-        csv = df_clean.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            "欠損を除外したCSVをダウンロード",
-            csv,
-            "cleaned_data.csv",
-            "text/csv"
+        # 不要列（Unnamed 系）を削除
+        df = df.loc[:, ~df.columns.str.contains("Unnamed")]
+
+        # 湿度列（%.1, %.2 ...）
+        hum_cols = [col for col in df.columns if col.startswith("%")]
+        # 温度列（°C.1, °C.2 ...）
+        temp_cols = [col for col in df.columns if col.startswith("°C")]
+
+        # 列名をセンサー名に置き換え
+        hum_map = {col: header[col] for col in hum_cols}
+        temp_map = {col: header[col] for col in temp_cols}
+
+        df = df.rename(columns=hum_map)
+        df = df.rename(columns=temp_map)
+
+        # wide → long
+        df_hum = df.melt(
+            id_vars="datetime",
+            value_vars=list(hum_map.values()),
+            var_name="location",
+            value_name="humidity_RH"
         )
+
+        df_temp = df.melt(
+            id_vars="datetime",
+            value_vars=list(temp_map.values()),
+            var_name="location",
+            value_name="temperature_C"
+        )
+
+        # 温湿度を結合
+        df_merge = pd.merge(df_hum, df_temp, on=["datetime", "location"])
+
+        # ここで欠損ロガーの行を除外（追加部分）
+        df_merge["humidity_RH"] = pd.to_numeric(df_merge["humidity_RH"], errors="coerce")
+        df_merge["temperature_C"] = pd.to_numeric(df_merge["temperature_C"], errors="coerce")
+
+        df_merge = df_merge.dropna(subset=["humidity_RH", "temperature_C"])
+
+        all_data.append(df_merge)
+
+    # 全月の結合
+    df_final = pd.concat(all_data, ignore_index=True)
+    df_final = df_final.sort_values("datetime")
+
+    st.success("統合が完了しました！（欠損ロガーを自動除外）")
+
+    st.dataframe(df_final.head(20))
+
+    # CSV としてダウンロード
+    csv = df_final.to_csv(index=False).encode("utf-8-sig")
+    st.download_button(
+        label="統合データを CSV でダウンロード",
+        data=csv,
+        file_name="museum_env_all.csv",
+        mime="text/csv"
+    )
