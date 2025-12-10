@@ -1,91 +1,68 @@
 import streamlit as st
 import pandas as pd
-import io
 
-st.title("博物館 温湿度データ 統合ツール（Streamlit版）")
-st.write("月ごとの Excel ファイルを複数アップロードすると、年間通した縦長データに統合します。")
+st.title("📊 温湿度ロガー データ変換アプリ（Excel → tidy CSV）")
 
-uploaded_files = st.file_uploader("Excel ファイルを月ごとにアップロード", type=["xlsx"], accept_multiple_files=True)
+uploaded_files = st.file_uploader(
+    "月ごとの Excel ファイルをまとめてアップロード", 
+    type=["xlsx", "xls"],
+    accept_multiple_files=True
+)
 
 if uploaded_files:
     all_data = []
 
-    for uploaded_file in uploaded_files:
-        st.write(f"処理中: {uploaded_file.name}")
+    for file in uploaded_files:
+        st.write(f"処理中: {file.name}")
 
-        # Excel 読み込み
-        df = pd.read_excel(uploaded_file)
+        # 1. Excel 読み込み（1行目スキップ）
+        df = pd.read_excel(file, header=1)   # 1行目スキップ → ヘッダは2行目
 
-        # datetime 列を設定
-        if "Unnamed: 1" in df.columns:
-            df = df.rename(columns={"Unnamed: 1": "datetime"})
-        else:
-            st.error(f"{uploaded_file.name}: datetime 列（Unnamed: 1）が見つかりません")
-            continue
+        # 2. 不要な空列を削除
+        df = df.dropna(axis=1, how="all")
 
-        # datetime を変換
-        df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
+        # 3. 列構造を把握して分割
+        # 湿度パート：左半分
+        # 温度パート：右半分
+        n_cols = df.shape[1]
+        half = n_cols // 2
 
-        # センサー名が含まれる 1 行目を抽出
-        header = df.iloc[0]
+        hum = df.iloc[:, :half]
+        tem = df.iloc[:, half:]
 
-        # データ本体（1行目を削除）
-        df = df.drop(0)
+        # 4. 列名取得
+        hum_cols = hum.columns[1:]  # ロガー名（Date/Time を除く）
+        tem_cols = tem.columns[1:]  # 同じ順
 
-        # 不要列（Unnamed 系）を削除
-        df = df.loc[:, ~df.columns.str.contains("Unnamed")]
+        # 5. reshape: wide → long
+        hum_long = hum.melt(id_vars=[hum.columns[0]], 
+                            value_vars=hum_cols,
+                            var_name="Logger",
+                            value_name="Humidity")
 
-        # 湿度列（%.1, %.2 ...）
-        hum_cols = [col for col in df.columns if col.startswith("%")]
-        # 温度列（°C.1, °C.2 ...）
-        temp_cols = [col for col in df.columns if col.startswith("°C")]
+        tem_long = tem.melt(id_vars=[tem.columns[0]],
+                            value_vars=tem_cols,
+                            var_name="Logger",
+                            value_name="Temperature")
 
-        # 列名をセンサー名に置き換え
-        hum_map = {col: header[col] for col in hum_cols}
-        temp_map = {col: header[col] for col in temp_cols}
+        # 6. 時間＋ロガーで結合
+        hum_long = hum_long.rename(columns={hum.columns[0]: "Time"})
+        tem_long = tem_long.rename(columns={tem.columns[0]: "Time"})
 
-        df = df.rename(columns=hum_map)
-        df = df.rename(columns=temp_map)
+        merged = pd.merge(hum_long, tem_long, on=["Time", "Logger"], how="inner")
+        all_data.append(merged)
 
-        # wide → long
-        df_hum = df.melt(
-            id_vars="datetime",
-            value_vars=list(hum_map.values()),
-            var_name="location",
-            value_name="humidity_RH"
-        )
+    # 7. すべての月を結合
+    result = pd.concat(all_data, ignore_index=True)
 
-        df_temp = df.melt(
-            id_vars="datetime",
-            value_vars=list(temp_map.values()),
-            var_name="location",
-            value_name="temperature_C"
-        )
+    st.subheader("📄 整形後データ（プレビュー）")
+    st.dataframe(result)
 
-        # 温湿度を結合
-        df_merge = pd.merge(df_hum, df_temp, on=["datetime", "location"])
-
-        # ここで欠損ロガーの行を除外（追加部分）
-        df_merge["humidity_RH"] = pd.to_numeric(df_merge["humidity_RH"], errors="coerce")
-        df_merge["temperature_C"] = pd.to_numeric(df_merge["temperature_C"], errors="coerce")
-
-        df_merge = df_merge.dropna(subset=["humidity_RH", "temperature_C"])
-
-        all_data.append(df_merge)
-
-    # 全月の結合
-    df_final = pd.concat(all_data, ignore_index=True)
-    df_final = df_final.sort_values("datetime")
-
-    st.success("統合が完了しました！（欠損ロガーを自動除外）")
-
-    st.dataframe(df_final.head(20))
-
-    # CSV としてダウンロード
-    csv = df_final.to_csv(index=False).encode("utf-8-sig")
+    # 8. CSV ダウンロード
+    csv = result.to_csv(index=False).encode("utf-8")
     st.download_button(
-        label="統合データを CSV でダウンロード",
+        label="📥 CSV をダウンロード",
         data=csv,
-        file_name="museum_env_all.csv",
+        file_name="logger_year_data.csv",
         mime="text/csv"
     )
