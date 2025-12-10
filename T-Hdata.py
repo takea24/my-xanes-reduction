@@ -1,82 +1,70 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
-st.title("📊 温湿度ロガー データ変換アプリ（Excel → tidy CSV）")
+st.title("温湿度ロガー データ整理アプリ（30分丸め版）")
 
-uploaded_files = st.file_uploader(
-    "Excel ファイルをアップロード（複数可）",
-    type=["xlsx", "xls"],
-    accept_multiple_files=True
-)
+st.write("月ごとの Excel ファイルを複数選択してアップロードしてください。")
+
+uploaded_files = st.file_uploader("Excel ファイルを選ぶ", type=["xlsx", "xls"], accept_multiple_files=True)
 
 if uploaded_files:
     all_data = []
 
     for file in uploaded_files:
-        st.write(f"処理中: {file.name}")
+        st.write(f"読み込み中: {file.name}")
 
-        # ヘッダーは2行目（= header=1）
+        # エクセル読み込み（1行目不要 → header=1）
         df = pd.read_excel(file, header=1)
 
-        # 全空列消す
-        df = df.dropna(axis=1, how="all")
+        # 湿度ブロック（左側）
+        hum_block = df.iloc[:, :14].copy()
+        hum_block.columns = ["Time"] + list(hum_block.columns[1:])
 
-        # ---- 🔍 左側の Date/Time の列位置を検出 ----
-        dt_cols = [c for c in df.columns if "Date" in str(c)]
-        if len(dt_cols) != 2:
-            st.error(f"{file.name}: Date/Time 列が2つ検出できません。")
-            continue
+        # 温度ブロック（右側）
+        tem_block = df.iloc[:, 14:].copy()
+        tem_block.columns = ["Time"] + list(tem_block.columns[1:])
 
-        dt_hum = dt_cols[0]   # 湿度側
-        dt_tem = dt_cols[1]   # 温度側
+        # 時刻を datetime に変換
+        hum_block["Time"] = pd.to_datetime(hum_block["Time"], errors="coerce")
+        tem_block["Time"] = pd.to_datetime(tem_block["Time"], errors="coerce")
 
-        # ---- 湿度ブロック ----
-        hum_start = df.columns.get_loc(dt_hum)
-        tem_start = df.columns.get_loc(dt_tem)
+        # ロング形式へ変換
+        hum_long = hum_block.melt(id_vars="Time", var_name="Logger", value_name="Humidity")
+        tem_long = tem_block.melt(id_vars="Time", var_name="Logger", value_name="Temperature")
 
-        hum = df.iloc[:, hum_start:tem_start]     # 湿度ブロック
-        tem = df.iloc[:, tem_start:]              # 温度ブロック
-
-        # 列名
-        hum_cols = hum.columns[1:]
-        tem_cols = tem.columns[1:]
-
-        # ---- long 形式へ ----
-        hum_long = hum.melt(id_vars=[dt_hum], value_vars=hum_cols,
-                            var_name="Logger", value_name="Humidity")
-        tem_long = tem.melt(id_vars=[dt_tem], value_vars=tem_cols,
-                            var_name="Logger", value_name="Temperature")
-
-        hum_long = hum_long.rename(columns={dt_hum: "Time"})
-        tem_long = tem_long.rename(columns={dt_tem: "Time"})
-
-        # ---- 型そろえる ----
-        hum_long["Time"] = pd.to_datetime(hum_long["Time"], errors="coerce")
-        tem_long["Time"] = pd.to_datetime(tem_long["Time"], errors="coerce")
-
+        # Logger 名 正規化
         hum_long["Logger"] = hum_long["Logger"].astype(str).str.strip()
         tem_long["Logger"] = tem_long["Logger"].astype(str).str.strip()
 
+        # 時刻を30分単位に丸める
+        hum_long["Time"] = hum_long["Time"].dt.floor("30min")
+        tem_long["Time"] = tem_long["Time"].dt.floor("30min")
 
-        hum_long["Humidity"] = pd.to_numeric(hum_long["Humidity"], errors="coerce")
-        tem_long["Temperature"] = pd.to_numeric(tem_long["Temperature"], errors="coerce")
-
-        # ---- 結合 ----
+        # 温度・湿度をマージ
         merged = pd.merge(hum_long, tem_long, on=["Time", "Logger"], how="inner")
 
-        # ---- 欠損削除 ----
+        # 湿度・温度が欠けている行を削除
         merged = merged.dropna(subset=["Humidity", "Temperature"])
 
         all_data.append(merged)
 
-    # ---- 全部結合 ----
+    # 全月を結合
     if all_data:
-        result = pd.concat(all_data, ignore_index=True)
+        final_df = pd.concat(all_data, ignore_index=True)
 
-        st.subheader("📄 整形後データ（プレビュー）")
-        st.dataframe(result)
+        st.write("### 🔍 整理されたデータ（プレビュー）")
+        st.dataframe(final_df.head(50))
 
-        csv = result.to_csv(index=False).encode("utf-8")
-        st.download_button("📥 CSV ダウンロード", csv, "logger_year.csv", "text/csv")
+        # CSV 保存
+        csv_data = final_df.to_csv(index=False).encode("utf-8-sig")
+
+        st.download_button(
+            label="📥 CSV をダウンロード",
+            data=csv_data,
+            file_name="T-H_merged_30min.csv",
+            mime="text/csv"
+        )
+
     else:
-        st.warning("処理できたデータがありませんでした。")
+        st.error("データがありません。Excel ファイルの形式を確認してください。")
