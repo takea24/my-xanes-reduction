@@ -64,6 +64,9 @@ if uploaded:
             except Exception as e:
                 st.error(f"Meteostat 取得エラー: {e}")
                 outdoor = None
+        outdoor.index = outdoor.index.tz_localize("UTC").tz_convert("Asia/Tokyo")
+        outdoor.index = outdoor.index.tz_localize(None)
+        outdoor.reset_index(inplace=True)
 
         if outdoor is not None and len(outdoor) > 0:
             outdoor = outdoor.rename(columns={
@@ -101,6 +104,13 @@ if uploaded:
         df_merged = df.copy()
         df_merged["outdoor_temp"] = np.nan
         df_merged["outdoor_rh"] = np.nan
+
+        st.subheader("外気データ結合チェック")
+        st.write(df_merged[["datetime", "temperature_C", "outdoor_temp", "outdoor_rh"]].head(20))
+
+        st.write("外気温 NaN 数:", df_merged["outdoor_temp"].isna().sum())
+        st.write("外気湿度 NaN 数:", df_merged["outdoor_rh"].isna().sum())
+
 
     # ----------------------------
     # 4. ロガー選択
