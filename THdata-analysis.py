@@ -139,8 +139,8 @@ if uploaded:
     # ----------------------------
     st.subheader("表示期間の選択")
 
-    min_time = df_loc["datetime"].min()
-    max_time = df_loc["datetime"].max()
+    min_time = pd.to_datetime(df_loc["datetime"].min()).to_pydatetime()
+    max_time = pd.to_datetime(df_loc["datetime"].max()).to_pydatetime()
 
     start_time, end_time = st.slider(
         "表示する期間を選択してください",
