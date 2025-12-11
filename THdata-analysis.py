@@ -497,24 +497,31 @@ if uploaded:
     temp_corr = temp_pivot.corr()
     rh_corr = rh_pivot.corr()
 
-    # Plotly heatmap
+    # カラーマップは相関係数が高いほど濃い色にする（Blues系）
+    color_map = "Blues"
+
+    # 温度相関マトリクス
     fig_temp_corr = px.imshow(
         temp_corr,
-        text_auto=True,
+        text_auto=".2f",         # 有効数字2桁
         aspect="auto",
+        color_continuous_scale=color_map,
         title="ロガー間の相関（温度）"
     )
     st.plotly_chart(fig_temp_corr, use_container_width=True)
 
+    # 湿度相関マトリクス
     fig_rh_corr = px.imshow(
         rh_corr,
-        text_auto=True,
+        text_auto=".2f",         # 有効数字2桁
         aspect="auto",
+        color_continuous_scale=color_map,
         title="ロガー間の相関（湿度）"
     )
     st.plotly_chart(fig_rh_corr, use_container_width=True)
 
     st.caption("相関係数 1.0 に近いほど、温度/湿度の変動パターンが似ているロガーです。")
+
 
     # ================================
     # ③ 保存基準との比較（達成率）
