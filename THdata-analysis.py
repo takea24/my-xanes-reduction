@@ -384,16 +384,16 @@ if uploaded:
         with zipfile.ZipFile(zip_buffer, "w") as zip_file:
 
             # ロガー名一覧
-            loggers = df_clean["logger"].unique()
+            loggers = df_merged["location"].unique()
 
             for logger in loggers:
-                dlog = df_clean[df_clean["logger"] == logger]
+                dlog = df_merged[df_merged["location"] == logger]
 
                 # 年ごとに箱ひげ図
                 fig, ax = plt.subplots(figsize=(7, 5))
 
                 dlog.boxplot(
-                    column="Temp",
+                    column="temperature_C",
                     by="year",
                     ax=ax,
                     grid=False,
