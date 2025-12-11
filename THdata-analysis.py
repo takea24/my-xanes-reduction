@@ -4,16 +4,21 @@ import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-matplotlib.rcParams['font.family'] = 'DejaVu Sans'
-matplotlib.rcParams["axes.unicode_minus"] = False  # マイナス符号の文字化け防止
+
+# メインフォントを DejaVu Sans にする
+matplotlib.rcParams["font.family"] = "DejaVu Sans"
+
+# マイナス記号の文字化け対策
+matplotlib.rcParams["axes.unicode_minus"] = False
+
+# フォールバックを有効化（日本語を描画できる場合がある）
+matplotlib.rcParams["font.sans-serif"] = ["DejaVu Sans"]
+
 
 from datetime import datetime
 
 import matplotlib.font_manager as fm
 
-# 利用できるフォント一覧を表示
-available_fonts = sorted([f.name for f in fm.fontManager.ttflist])
-st.write("利用可能なフォント一覧:", available_fonts)
 
 # meteostat はオプション扱い
 try:
