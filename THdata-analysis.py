@@ -184,14 +184,13 @@ if uploaded:
     ax.legend()
     st.pyplot(fig)
 
-
     # ----------------------------
     # 7. 月別クリモグラフ（ロガー別 Temp–RH）
     # ----------------------------
     st.subheader("月別クリモグラフ（Temp–RH、ロガー別選択）")
 
-    # 月を数値で持つ
-    df_merged["month"] = df_merged["datetime"].dt.month
+    # ★ 年 + 月 の Period を使う
+    df_merged["ym"] = df_merged["datetime"].dt.to_period("M")
 
     # ロガー一覧
     logger_list = sorted(df_merged["location"].unique().tolist())
@@ -210,9 +209,10 @@ if uploaded:
     # 選ばれたロガーごとに作図
     for lg in selected_loggers:
 
+        # ★ 年月ごとに平均
         monthly = (
             df_merged[df_merged["location"] == lg]
-            .groupby("month")
+            .groupby("ym")
             .agg(
                 temperature=("temperature_C", "mean"),
                 humidity=("humidity_RH", "mean")
@@ -220,19 +220,22 @@ if uploaded:
             .reset_index()
         )
 
-     # 月表示（ホバー用）
-        monthly["label"] = monthly["month"].astype(str) + "月"
+        # ★ プロットの順序を chronological に
+        monthly = monthly.sort_values("ym")
+
+        # ★ ホバーとラベル用（2024-01 形式）
+        monthly["label"] = monthly["ym"].astype(str)
 
         fig.add_trace(
             go.Scatter(
                 x=monthly["humidity"],
                 y=monthly["temperature"],
-                mode="lines+markers+text",   # ← ★ text を描画するために追加
+                mode="lines+markers+text",
                 name=lg,
-                text=monthly["month"],       # ← ★ 点の横に月番号を表示
-                textposition="middle right", # ← ★ 点の右側に配置
+                text=monthly["label"],          # ← 年月ラベル表示
+                textposition="middle right",
                 hovertemplate=(
-                    "月: %{text}月<br>"
+                    "年月: %{text}<br>"
                     "湿度: %{x:.1f}%<br>"
                     "温度: %{y:.1f}℃<extra></extra>"
                 )
