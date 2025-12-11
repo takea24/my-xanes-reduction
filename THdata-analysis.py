@@ -14,15 +14,31 @@ st.title("館内温湿度モニタリング（外気比較付き）")
 uploaded = st.file_uploader("館内温湿度データ CSV をアップロードしてください", type=["csv"])
 
 if uploaded:
-    df = pd.read_csv(uploaded, parse_dates=["datetime"])
+    # ヘッダーを読む
+    df_head = pd.read_csv(uploaded, nrows=5)
+    uploaded.seek(0)
 
-    # 必須列チェック（柔軟に対応）
-    required = {"datetime", "location", "humidity_RH", "temperature_C"}
-    if not required.issubset(df.columns):
-        st.error(f"CSV に必要な列がありません: {required}")
-        st.stop()
+    # datetime の候補
+    datetime_candidates = ["datetime", "date", "date/time", "time", "time30", "timestamp"]
 
-    st.success("CSV を読み込みました！")
+    lower_cols = [c.lower() for c in df_head.columns]
+
+    dt_col = None
+    for cand in datetime_candidates:
+        if cand in lower_cols:
+            dt_col = df_head.columns[lower_cols.index(cand)]
+            break
+
+    if dt_col is None:
+        st.error("日時列が見つかりませんでした（datetime, time, time30 など）。")
+    else:
+        st.success(f"日時列として '{dt_col}' を使用します。")
+
+        df = pd.read_csv(uploaded, parse_dates=[dt_col])
+        df = df.rename(columns={dt_col: "datetime"})
+
+        st.write(df.head())
+
     
     # ----------------------------
     # 2. 外気データの取得（京都 左京区付近）
