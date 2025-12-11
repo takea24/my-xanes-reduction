@@ -160,10 +160,10 @@ if uploaded:
     st.subheader("温度の比較（館内 vs 外気）")
 
     fig, ax = plt.subplots(figsize=(10,4))
-    ax.plot(df_view["datetime"], df_view["temperature_C"], label=f"{selected_loc}（館内）")
+    ax.plot(df_view["datetime"], df_view["temperature_C"], label=f"{selected_loc}(KUM)")
 
     if outdoor is not None:
-        ax.plot(df_view["datetime"], df_view["outdoor_temp"], label="京都（外気）", alpha=0.6)
+        ax.plot(df_view["datetime"], df_view["outdoor_temp"], label="Kyoto Meteostat", alpha=0.6)
 
     ax.set_ylabel("Temperature (°C)")
     ax.legend()
@@ -175,10 +175,10 @@ if uploaded:
     st.subheader("湿度の比較（館内 vs 外気）")
 
     fig, ax = plt.subplots(figsize=(10,4))
-    ax.plot(df_view["datetime"], df_view["humidity_RH"], label=f"{selected_loc}（館内）")
+    ax.plot(df_view["datetime"], df_view["humidity_RH"], label=f"{selected_loc}(KUM)")
 
     if outdoor is not None:
-        ax.plot(df_view["datetime"], df_view["outdoor_rh"], label="京都（外気）", alpha=0.6)
+        ax.plot(df_view["datetime"], df_view["outdoor_rh"], label="Kyoto Meteostat", alpha=0.6)
 
     ax.set_ylabel("Relative Humidity (%)")
     ax.legend()
