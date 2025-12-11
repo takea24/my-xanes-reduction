@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 import io
 import zipfile
+import matplotlib.colors as mcolors
 
 from datetime import datetime
 
@@ -417,7 +418,7 @@ if uploaded:
             mime="application/zip",
         )
 
-    if st.button("ZIP を生成してダウンロード（png）"):
+    if st.button("ZIP を生成してダウンロード"):
 
         zip_buffer = io.BytesIO()
 
@@ -426,36 +427,47 @@ if uploaded:
             for logger in df_merged["location"].unique():
                 dlog = df_merged[df_merged["location"] == logger]
 
-                # --------------------------
-                # 温度の箱ひげ図（matplotlib）
-                # --------------------------
-                fig, ax = plt.subplots(figsize=(7,5))
-                dlog.boxplot(column="temperature_C", by="year", ax=ax)
-                ax.set_title(f"{logger} - Temperature Boxplot by Year")
-                ax.set_xlabel("Year")
-                ax.set_ylabel("Temperature (°C)")
-                plt.suptitle("")  # デフォルトのタイトル削除
+                for var, ylabel in [("temperature_C", "Temperature (°C)"),
+                                    ("humidity_RH", "Relative Humidity (%)")]:
 
-                # PNG に保存
-                png_bytes = io.BytesIO()
-                fig.savefig(png_bytes, format="png", bbox_inches="tight")
-                plt.close(fig)
-                zip_file.writestr(f"{logger}_temperature_boxplot.png", png_bytes.getvalue())
+                    # 年ごとに色を決める
+                    years = sorted(dlog["year"].unique())
+                    colors = plt.cm.tab10.colors  # 10色まで
 
-                # --------------------------
-                # 湿度の箱ひげ図（matplotlib）
-                # --------------------------
-                fig, ax = plt.subplots(figsize=(7,5))
-                dlog.boxplot(column="humidity_RH", by="year", ax=ax)
-                ax.set_title(f"{logger} - Humidity Boxplot by Year")
-                ax.set_xlabel("Year")
-                ax.set_ylabel("Relative Humidity (%)")
-                plt.suptitle("") 
-                
-                png_bytes = io.BytesIO()
-                fig.savefig(png_bytes, format="png", bbox_inches="tight")
-                plt.close(fig)
-                zip_file.writestr(f"{logger}_humidity_boxplot.png", png_bytes.getvalue())
+                    fig, ax = plt.subplots(figsize=(10,6))
+
+                    positions = []
+                    labels = []
+
+                    for i, year in enumerate(years):
+                        for month in range(1, 13):
+                            data = dlog[(dlog["year"] == year) & (dlog["month"] == month)][var]
+                            if len(data) == 0:
+                                continue
+                            pos = len(positions) + 1
+                            positions.append(pos)
+                            labels.append(f"{month}-{year}")
+                            bplot = ax.boxplot(data,
+                                               positions=[pos],
+                                               widths=0.6,
+                                               patch_artist=True,
+                                               boxprops=dict(facecolor=colors[i % len(colors)], alpha=0.6),
+                                               flierprops=dict(marker='o', color=colors[i % len(colors)], alpha=0.6)
+                                               )
+
+                    ax.set_xticks(range(1, len(positions)+1))
+                    ax.set_xticklabels(labels, rotation=45, ha="right")
+                    ax.set_ylabel(ylabel)
+                    ax.set_title(f"{logger} - {ylabel} Boxplot (Month-Year)")
+
+                    fig.tight_layout()
+
+                    # PNG 保存
+                    png_bytes = io.BytesIO()
+                    fig.savefig(png_bytes, format="png", bbox_inches="tight")
+                    plt.close(fig)
+
+                    zip_file.writestr(f"{logger}_{var}_boxplot.png", png_bytes.getvalue())
 
         st.download_button(
             label="📥 ZIP をダウンロード",
