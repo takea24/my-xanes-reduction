@@ -200,7 +200,7 @@ if uploaded:
     selected_loggers = st.multiselect(
         "プロットするロガーを選択してください：",
         logger_list,
-        default=[selected_loc]  # デフォルトは現在表示中のロガーだけ
+        default=logger_list  # デフォルトは全ロガー
     )
 
     import plotly.graph_objects as go
@@ -287,7 +287,7 @@ if uploaded:
 
     ax.legend()
     ax.set_ylabel("Temperature (°C)")
-    ax.set_title(f"期間: {start_date} 〜 {end_date}")
+    ax.set_title(f"Period: {start_date} ~ {end_date}")
     st.pyplot(fig)
 
 
