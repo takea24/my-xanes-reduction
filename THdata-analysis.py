@@ -89,6 +89,12 @@ if uploaded:
     else:
         st.warning("外気データは取得されていません。")
 
+st.write("df datetime dtype:", df["datetime"].dtype)
+st.write("df_out datetime dtype:", df_out["datetime"].dtype)
+
+st.write("df head:", df.head())
+st.write("df_out head:", df_out.head())
+
 
     # ----------------------------
     # 3. データ結合
