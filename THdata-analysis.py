@@ -220,18 +220,19 @@ if uploaded:
             .reset_index()
         )
 
-        # 月表示（ホバー用）
+     # 月表示（ホバー用）
         monthly["label"] = monthly["month"].astype(str) + "月"
 
         fig.add_trace(
             go.Scatter(
                 x=monthly["humidity"],
                 y=monthly["temperature"],
-                mode="lines+markers",
+                mode="lines+markers+text",   # ← ★ text を描画するために追加
                 name=lg,
-                text=monthly["label"],
+                text=monthly["month"],       # ← ★ 点の横に月番号を表示
+                textposition="middle right", # ← ★ 点の右側に配置
                 hovertemplate=(
-                    "月: %{text}<br>"
+                    "月: %{text}月<br>"
                     "湿度: %{x:.1f}%<br>"
                     "温度: %{y:.1f}℃<extra></extra>"
                 )
