@@ -80,6 +80,13 @@ if uploaded:
     else:
         st.warning("Meteostat がインストールされていません。外気比較はスキップします。")
 
+    if outdoor is not None:
+        st.subheader("外気データ（先頭5行）")
+        st.write(outdoor.head())
+    else:
+        st.warning("外気データは取得されていません。")
+
+
     # ----------------------------
     # 3. データ結合
     # ----------------------------
