@@ -2,18 +2,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
-
-# メインフォントを DejaVu Sans にする
-matplotlib.rcParams["font.family"] = "DejaVu Sans"
-
-# マイナス記号の文字化け対策
-matplotlib.rcParams["axes.unicode_minus"] = False
-
-# フォールバックを有効化（日本語を描画できる場合がある）
-matplotlib.rcParams["font.sans-serif"] = ["DejaVu Sans"]
-
 
 from datetime import datetime
 
@@ -146,15 +135,35 @@ if uploaded:
     df_loc = df_merged[df_merged["location"] == selected_loc]
 
     # ----------------------------
+    # 期間選択（横軸の幅）
+    # ----------------------------
+    st.subheader("表示期間の選択")
+
+    min_time = df_loc["datetime"].min()
+    max_time = df_loc["datetime"].max()
+
+    start_time, end_time = st.slider(
+        "表示する期間を選択してください",
+        min_value=min_time,
+        max_value=max_time,
+        value=(min_time, max_time),
+        format="YYYY-MM-DD HH:mm"
+    )
+
+    # 選択期間でフィルタ
+    df_view = df_loc[(df_loc["datetime"] >= start_time) & (df_loc["datetime"] <= end_time)]
+
+
+    # ----------------------------
     # 5. 温度：館内 vs 外気
     # ----------------------------
     st.subheader("温度の比較（館内 vs 外気）")
 
     fig, ax = plt.subplots(figsize=(10,4))
-    ax.plot(df_loc["datetime"], df_loc["temperature_C"], label=f"{selected_loc}（館内）")
+    ax.plot(df_view["datetime"], df_view["temperature_C"], label=f"{selected_loc}（館内）")
 
     if outdoor is not None:
-        ax.plot(df_loc["datetime"], df_loc["outdoor_temp"], label="京都（外気）", alpha=0.6)
+        ax.plot(df_view["datetime"], df_view["outdoor_temp"], label="京都（外気）", alpha=0.6)
 
     ax.set_ylabel("Temperature (°C)")
     ax.legend()
@@ -166,39 +175,78 @@ if uploaded:
     st.subheader("湿度の比較（館内 vs 外気）")
 
     fig, ax = plt.subplots(figsize=(10,4))
-    ax.plot(df_loc["datetime"], df_loc["humidity_RH"], label=f"{selected_loc}（館内）")
+    ax.plot(df_view["datetime"], df_view["humidity_RH"], label=f"{selected_loc}（館内）")
 
     if outdoor is not None:
-        ax.plot(df_loc["datetime"], df_loc["outdoor_rh"], label="京都（外気）", alpha=0.6)
+        ax.plot(df_view["datetime"], df_view["outdoor_rh"], label="京都（外気）", alpha=0.6)
 
     ax.set_ylabel("Relative Humidity (%)")
     ax.legend()
     st.pyplot(fig)
 
+
     # ----------------------------
-    # 7. 月別クリモグラフ（館内平均）
+    # 7. 月別クリモグラフ（ロガー別 Temp–RH）
     # ----------------------------
-    st.subheader("月別クリモグラフ（館内平均）")
+    st.subheader("月別クリモグラフ（Temp–RH、ロガー別選択）")
 
-    df_merged["month"] = df_merged["datetime"].dt.to_period("M")
+    # 月を数値で持つ
+    df_merged["month"] = df_merged["datetime"].dt.month
 
-    monthly = df_merged.groupby("month").agg({
-        "temperature_C": "mean",
-        "humidity_RH": "mean"
-    })
+    # ロガー一覧
+    logger_list = sorted(df_merged["location"].unique().tolist())
 
-    fig, ax1 = plt.subplots(figsize=(10,5))
-    months = monthly.index.to_timestamp()
+    # 複数ロガー選択
+    selected_loggers = st.multiselect(
+        "プロットするロガーを選択してください：",
+        logger_list,
+        default=[selected_loc]  # デフォルトは現在表示中のロガーだけ
+    )
 
-    ax1.plot(months, monthly["temperature_C"], color="red", label="Temp (°C)")
-    ax1.set_ylabel("Temperature (°C)", color="red")
+    import plotly.graph_objects as go
 
-    ax2 = ax1.twinx()
-    ax2.bar(months, monthly["humidity_RH"], alpha=0.3, color="blue", label="RH (%)")
-    ax2.set_ylabel("Humidity (%)", color="blue")
+    fig = go.Figure()
 
-    plt.title("Monthly Climatogram (館内平均)")
-    st.pyplot(fig)
+    # 選ばれたロガーごとに作図
+    for lg in selected_loggers:
+
+        monthly = (
+            df_merged[df_merged["location"] == lg]
+            .groupby("month")
+            .agg(
+                temperature=("temperature_C", "mean"),
+                humidity=("humidity_RH", "mean")
+            )
+            .reset_index()
+        )
+
+        # 月表示（ホバー用）
+        monthly["label"] = monthly["month"].astype(str) + "月"
+
+        fig.add_trace(
+            go.Scatter(
+                x=monthly["humidity"],
+                y=monthly["temperature"],
+                mode="lines+markers",
+                name=lg,
+                text=monthly["label"],
+                hovertemplate=(
+                    "月: %{text}<br>"
+                    "湿度: %{x:.1f}%<br>"
+                    "温度: %{y:.1f}℃<extra></extra>"
+                )
+            )
+        )
+
+    fig.update_layout(
+        title="月別クリモグラフ（温度 vs 湿度）",
+        xaxis_title="湿度 (%)",
+        yaxis_title="温度 (°C)",
+        width=800,
+        height=600
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
     # ----------------------------
     # 8. ロガー間比較（最新1週間）
