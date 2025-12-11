@@ -252,6 +252,50 @@ if uploaded:
 
     st.plotly_chart(fig, use_container_width=True)
 
+    # ==========================================
+    # クリモグラフ用に使用したデータをまとめる
+    # ==========================================
+
+    all_monthly = []  # すべてのロガーの月平均データをここに保存
+
+    for lg in selected_loggers:
+
+        monthly = (
+            df_merged[df_merged["location"] == lg]
+            .groupby(["year", "month"])   # ← ★ 年も区別
+            .agg(
+                temperature=("temperature_C", "mean"),
+                humidity=("humidity_RH", "mean")
+            )
+            .reset_index()
+            .assign(logger=lg)
+        )
+
+        all_monthly.append(monthly)
+
+    # すべて結合した表
+    df_monthly_all = pd.concat(all_monthly, ignore_index=True)
+
+    # ==========================================
+    # データ表示
+    # ==========================================
+    st.subheader("クリモグラフで使用した月別平均データ")
+
+    st.dataframe(df_monthly_all)
+
+    # ==========================================
+    # CSV ダウンロードボタン
+    # ==========================================
+    csv = df_monthly_all.to_csv(index=False).encode("utf-8")
+
+    st.download_button(
+        label="📥 月別平均データを CSV でダウンロード",
+        data=csv,
+        file_name="climograph_monthly_data.csv",
+        mime="text/csv"
+    )
+    
+
     # ----------------------------
     # 8. ロガー間比較（任意期間）
     # ----------------------------
