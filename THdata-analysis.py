@@ -330,43 +330,44 @@ if uploaded:
     # ================================
     # ① 月別箱ひげ図（ロガー別の季節変動）
     # ================================
+    st.subheader("月別箱ひげ図（年別）")
 
-    st.subheader("月別箱ひげ図（温度・湿度）")
-
+    # 年・月を抽出（なければ追加）
+    df_merged["year"] = df_merged["datetime"].dt.year
     df_merged["month"] = df_merged["datetime"].dt.month
 
-    selected_loggers_box = st.multiselect(
-        "箱ひげ図に表示するロガーを選択：",
-        sorted(df_merged["location"].unique()),
-        default=[selected_loc]
+    # ロガー選択
+    logger_for_box = st.selectbox(
+        "箱ひげ図を表示するロガーを選択してください",
+        sorted(df_merged["location"].unique())
     )
 
-    if len(selected_loggers_box) > 0:
-        df_box = df_merged[df_merged["location"].isin(selected_loggers_box)]
+    df_box = df_merged[df_merged["location"] == logger_for_box]
 
-        # 温度の箱ひげ
-        fig_temp = px.box(
-            df_box,
-            x="month",
-            y="temperature_C",
-            color="location",
-            title="月別 温度分布（箱ひげ図）",
-            labels={"temperature_C": "温度 (°C)"}
-        )
-        st.plotly_chart(fig_temp, use_container_width=True)
+    # 温度の箱ひげ図
+    fig_temp = px.box(
+        df_box,
+        x="month",
+        y="temperature_C",
+        color="year",
+        points="outliers",
+        title=f"{logger_for_box} の月別温度（年別）箱ひげ図",
+        labels={"month": "月", "temperature_C": "温度 (°C)", "year": "年"},
+    )
+    st.plotly_chart(fig_temp, use_container_width=True)
 
-        # 湿度の箱ひげ
-        fig_rh = px.box(
-            df_box,
-            x="month",
-            y="humidity_RH",
-            color="location",
-            title="月別 湿度分布（箱ひげ図）",
-            labels={"humidity_RH": "湿度 (%)"}
-        )
-        st.plotly_chart(fig_rh, use_container_width=True)
-    else:
-        st.info("ロガーを1つ以上選択してください。")
+    # 湿度の箱ひげ図
+    fig_hum = px.box(
+        df_box,
+        x="month",
+        y="humidity_RH",
+        color="year",
+        points="outliers",
+        title=f"{logger_for_box} の月別湿度（年別）箱ひげ図",
+        labels={"month": "月", "humidity_RH": "湿度 (%)", "year": "年"},
+    )
+    st.plotly_chart(fig_hum, use_container_width=True)
+
         
     # ================================
     # ② ロガー間の相関マトリクス
