@@ -535,7 +535,7 @@ if uploaded:
 
     # 湿度基準 (整数で良ければ int に統一)
     RH_LOW = st.number_input("最低湿度", value=40, step=1, format="%d")
-    RH_HIGH = st.number_input("最高湿度", value=50, step=1, format="%d")
+    RH_HIGH = st.number_input("最高湿度", value=55, step=1, format="%d")
 
 
     # --- ロガー別診断
