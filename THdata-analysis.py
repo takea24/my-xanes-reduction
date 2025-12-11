@@ -9,6 +9,11 @@ matplotlib.rcParams["axes.unicode_minus"] = False  # マイナス符号の文字
 
 from datetime import datetime
 
+import matplotlib.font_manager as fm
+
+# 利用できるフォント一覧を表示
+available_fonts = sorted([f.name for f in fm.fontManager.ttflist])
+st.write("利用可能なフォント一覧:", available_fonts)
 
 # meteostat はオプション扱い
 try:
