@@ -77,10 +77,10 @@ if uploaded:
     # 4. ロガー選択
     # ----------------------------
     st.subheader("ロガー選択")
-    locations = df["location"].unique()
+    locations = df["Logger_norm"].unique()
     selected_loc = st.selectbox("表示するロガーを選んでください", locations)
 
-    df_loc = df_merged[df_merged["location"] == selected_loc]
+    df_loc = df_merged[df_merged["Logger_norm"] == selected_loc]
 
     # ----------------------------
     # 5. グラフ：館内 vs 外気（温度）
@@ -140,10 +140,10 @@ if uploaded:
 
     fig, ax = plt.subplots(figsize=(10,5))
 
-    for loc in latest_week["location"].unique():
+    for loc in latest_week["Logger_norm"].unique():
         ax.plot(
-            latest_week[latest_week["location"] == loc]["datetime"],
-            latest_week[latest_week["location"] == loc]["temperature_C"],
+            latest_week[latest_week["Logger_norm"] == loc]["datetime"],
+            latest_week[latest_week["Logger_norm"] == loc]["temperature_C"],
             label=loc
         )
 
