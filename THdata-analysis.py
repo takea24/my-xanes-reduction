@@ -206,88 +206,73 @@ if uploaded:
 
     fig = go.Figure()
     # ---------------------------------------------------------
-    # 境界線の関数を定義
+    # 境界線の関数（x = humidity, y = temperature）
     # ---------------------------------------------------------
+    x = np.linspace(0, 100, 400)
 
-    T = np.linspace(0, 40, 400)
+    # (60%,25℃) → (80%,15℃)
+    y1 = 25 + (15 - 25) / (80 - 60) * (x - 60)
 
-    # (25,60) - (15,80)
-    H1 = 60 + (80 - 60) / (15 - 25) * (T - 25)
+    # (80%,15℃) → (100%,10℃)
+    y2 = 15 + (10 - 15) / (100 - 80) * (x - 80)
 
-    # (15,80) - (10,100)
-    H2 = 80 + (100 - 80) / (10 - 15) * (T - 15)
-
-    # (25,80) - (10,90)
-    H3 = 80 + (90 - 80) / (10 - 25) * (T - 25)
+    # (80%,25℃) → (90%,10℃)
+    y3 = 25 + (10 - 25) / (90 - 80) * (x - 80)
 
     # =========================================================
-    # ① 淡赤（ライトレッド）領域
+    # ① ライトレッド領域
     # =========================================================
 
-    # A: 温度 ≥25 & 湿度 ≥ 60
-    Ta = np.array([25, 40, 40, 25])
-    Ha = np.array([60, 60, 100, 100])
+    # A: x ≥ 60 & y ≥ 25（右上の矩形）
+    xA = np.array([60, 100, 100, 60])
+    yA = np.array([25, 25, 100, 100])
 
-    # B: 湿度60–80 & H>=H1
-    mask1 = (T <= 25) & (T >= 15)
-    Tb1 = T[mask1]
-    Hb1 = H1[mask1]
+    # B: 60–80% の範囲で y ≥ y1
+    maskB = (x >= 60) & (x <= 80)
+    xB = x[maskB]
+    yB = y1[maskB]
 
-    # C: 湿度80–100 & H>=H2
-    mask2 = (T <= 15) & (T >= 10)
-    Tc1 = T[mask2]
-    Hc1 = H2[mask2]
+    # C: 80–100% の範囲で y ≥ y2
+    maskC = (x >= 80) & (x <= 100)
+    xC = x[maskC]
+    yC = y2[maskC]
 
-    # 多角形として結合
-    T_light = np.concatenate([
-        Ta,
-        Tb1[::-1],
-        Tc1[::-1]
-    ])
-    H_light = np.concatenate([
-        Ha,
-        Hb1[::-1],
-        Hc1[::-1]
-    ])
+    # 1つのポリゴンに結合
+    x_light = np.concatenate([xA, xB[::-1], xC[::-1]])
+    y_light = np.concatenate([yA, yB[::-1], yC[::-1]])
 
     fig.add_trace(go.Scatter(
-        x=T_light,
-        y=H_light,
+        x=x_light,
+        y=y_light,
         fill="toself",
         fillcolor="rgba(255,150,150,0.4)",
         line=dict(color="rgba(0,0,0,0)"),
-        name="light red region"
+        name="Light Red Region"
     ))
 
     # =========================================================
-    # ② 赤（レッド）領域
+    # ② レッド領域
     # =========================================================
 
-    # A: 温度≥25 & 湿度≥80
-    Ta2 = np.array([25, 40, 40, 25])
-    Ha2 = np.array([80, 80, 100, 100])
+    # A': x ≥ 80 & y ≥ 25
+    xA2 = np.array([80, 100, 100, 80])
+    yA2 = np.array([25, 25, 100, 100])
 
-    # B: 湿度80–100 & H>=H3
-    mask3 = (T <= 25) & (T >= 10)
-    Tb2 = T[mask3]
-    Hb2 = H3[mask3]
+    # B': 80–100% の y ≥ y3
+    maskD = (x >= 80) & (x <= 100)
+    xD = x[maskD]
+    yD = y3[maskD]
 
-    T_red = np.concatenate([
-        Ta2,
-        Tb2[::-1]
-    ])
-    H_red = np.concatenate([
-        Ha2,
-        Hb2[::-1]
-    ])
+    x_red = np.concatenate([xA2, xD[::-1]])
+    y_red = np.concatenate([yA2, yD[::-1]])
 
     fig.add_trace(go.Scatter(
-        x=T_red,
-        y=H_red,
+        x=x_red,
+        y=y_red,
         fill="toself",
-        fillcolor="rgba(255,0,0,0.5)",
+        fillcolor="rgba(255,0,0,0.45)",
         line=dict(color="rgba(0,0,0,0)"),
-        name="red region"
+        name="Red Region"
     ))
 
     # 選ばれたロガーごとに作図
