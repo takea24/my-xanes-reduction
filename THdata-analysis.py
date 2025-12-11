@@ -73,12 +73,16 @@ if uploaded:
                 "temp": "outdoor_temp",
                 "rhum": "outdoor_rh"
             })
+
+            # index を datetime として確定させ、列に戻す
             outdoor.index.name = "datetime"
-            outdoor.reset_index(inplace=True)
+            outdoor = outdoor.reset_index()  # これだけでOK
+
             st.success("外気データ取得完了")
         else:
             st.warning("外気データが取得できなかったため、外気比較はスキップします。")
             outdoor = None
+
 
     else:
         st.warning("Meteostat がインストールされていません。外気比較はスキップします。")
@@ -90,10 +94,10 @@ if uploaded:
         st.warning("外気データは取得されていません。")
 
     st.write("df datetime dtype:", df["datetime"].dtype)
-    st.write("df_out datetime dtype:", df_out["datetime"].dtype)
+    st.write("outdoor datetime dtype:", outdoor["datetime"].dtype)
 
     st.write("df head:", df.head())
-    st.write("df_out head:", df_out.head())
+    st.write("outdoor head:", outdoor.head())
 
 
     # ----------------------------
