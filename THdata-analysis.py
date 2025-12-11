@@ -326,6 +326,132 @@ if uploaded:
     ax.set_title(f"Period: {start_date} ~ {end_date}")
     st.pyplot(fig)
 
+    # ================================
+    # ① 月別箱ひげ図（ロガー別の季節変動）
+    # ================================
+
+    st.subheader("月別箱ひげ図（温度・湿度）")
+
+    df_merged["month"] = df_merged["datetime"].dt.month
+
+    selected_loggers_box = st.multiselect(
+        "箱ひげ図に表示するロガーを選択：",
+        sorted(df_merged["location"].unique()),
+        default=[selected_loc]
+    )
+
+    if len(selected_loggers_box) > 0:
+        df_box = df_merged[df_merged["location"].isin(selected_loggers_box)]
+
+        # 温度の箱ひげ
+        fig_temp = px.box(
+            df_box,
+            x="month",
+            y="temperature_C",
+            color="location",
+            title="月別 温度分布（箱ひげ図）",
+            labels={"temperature_C": "温度 (°C)"}
+        )
+        st.plotly_chart(fig_temp, use_container_width=True)
+
+        # 湿度の箱ひげ
+        fig_rh = px.box(
+            df_box,
+            x="month",
+            y="humidity_RH",
+            color="location",
+            title="月別 湿度分布（箱ひげ図）",
+            labels={"humidity_RH": "湿度 (%)"}
+        )
+        st.plotly_chart(fig_rh, use_container_width=True)
+    else:
+        st.info("ロガーを1つ以上選択してください。")
+        
+    # ================================
+    # ② ロガー間の相関マトリクス
+    # ================================
+
+    st.subheader("ロガー間の相関マトリクス（温度・湿度）")
+
+    # --- ロガー×時間 の pivot（温度）
+    temp_pivot = df_merged.pivot_table(
+        index="datetime",
+        columns="location",
+        values="temperature_C"
+    )
+
+    # --- ロガー×時間 の pivot（湿度）
+    rh_pivot = df_merged.pivot_table(
+        index="datetime",
+        columns="location",
+        values="humidity_RH"
+    )
+
+    # 相関計算
+    temp_corr = temp_pivot.corr()
+    rh_corr = rh_pivot.corr()
+
+    # Plotly heatmap
+    fig_temp_corr = px.imshow(
+        temp_corr,
+        text_auto=True,
+        aspect="auto",
+        title="ロガー間の相関（温度）"
+    )
+    st.plotly_chart(fig_temp_corr, use_container_width=True)
+
+    fig_rh_corr = px.imshow(
+        rh_corr,
+        text_auto=True,
+        aspect="auto",
+        title="ロガー間の相関（湿度）"
+    )
+    st.plotly_chart(fig_rh_corr, use_container_width=True)
+
+    st.caption("相関係数 1.0 に近いほど、温度/湿度の変動パターンが似ているロガーです。")
+
+    # ================================
+    # ③ 保存基準との比較（達成率）
+    # ================================
+
+    st.subheader("保存基準との比較（ロガー別診断）")
+
+    # --- 基準値
+    TEMP_LOW, TEMP_HIGH = 18, 22
+    RH_LOW, RH_HIGH = 40, 50
+
+    logger_summary = []
+
+    for lg in sorted(df_merged["location"].unique()):
+        sub = df_merged[df_merged["location"] == lg]
+
+        total = len(sub)
+
+        temp_good = ((sub["temperature_C"] >= TEMP_LOW) & (sub["temperature_C"] <= TEMP_HIGH)).sum()
+        rh_good = ((sub["humidity_RH"] >= RH_LOW) & (sub["humidity_RH"] <= RH_HIGH)).sum()
+
+        logger_summary.append({
+            "location": lg,
+            "総サンプル数": total,
+            "温度が基準内 (%)": temp_good / total * 100,
+            "湿度が基準内 (%)": rh_good / total * 100,
+            "温度逸脱回数": total - temp_good,
+            "湿度逸脱回数": total - rh_good,
+        })
+
+    df_criteria = pd.DataFrame(logger_summary)
+
+    st.dataframe(df_criteria, use_container_width=True)
+
+    # --- CSV ダウンロード
+    csv_criteria = df_criteria.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "📥 保存基準比較の結果を CSV ダウンロード",
+        data=csv_criteria,
+        file_name="environment_criteria_report.csv",
+        mime="text/csv"
+    )
+
 
 else:
     st.info("館内データ CSV をアップロードしてください。")
