@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import plotly.express as px
+import io
+import zipfile
 
 from datetime import datetime
 
@@ -344,7 +346,11 @@ if uploaded:
 
     df_box = df_merged[df_merged["location"] == logger_for_box]
 
-    st.write("箱：中央値±25%のデータ範囲(ばらつきの指標), ヒゲ：箱外の最大/最小値の1.5倍までの範囲（通常のデータ範囲）,それ以外はハズレ値")
+    st.write("箱：中央値±25%のデータ範囲(ばらつきの指標)")
+    st.write("ヒゲ：箱外の最大/最小値の1.5倍までの範囲（通常のデータ範囲）")
+    st.write("それ以外はハズレ値")
+
+
     # 温度の箱ひげ図
     fig_temp = px.box(
         df_box,
@@ -369,7 +375,52 @@ if uploaded:
     )
     st.plotly_chart(fig_hum, use_container_width=True)
 
-        
+
+    st.header("📦 各ロガーの箱ひげ図を PDF で一括ダウンロード")
+    if st.button("PDF を生成して ZIP でダウンロード"):
+        # ZIP用バッファ
+        zip_buffer = io.BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+
+            # ロガー名一覧
+            loggers = df_clean["logger"].unique()
+
+            for logger in loggers:
+                dlog = df_clean[df_clean["logger"] == logger]
+
+                # 年ごとに箱ひげ図
+                fig, ax = plt.subplots(figsize=(7, 5))
+
+                dlog.boxplot(
+                    column="Temp",
+                    by="year",
+                    ax=ax,
+                    grid=False,
+                )
+
+                ax.set_title(f"{logger} - Temperature Boxplot by Year")
+                ax.set_xlabel("Year")
+                ax.set_ylabel("Temperature (℃)")
+                plt.suptitle("")  # 余計なタイトルを消す
+
+                # PDF保存
+                pdf_bytes = io.BytesIO()
+                fig.savefig(pdf_bytes, format="pdf", bbox_inches="tight")
+                plt.close(fig)
+
+                # ZIP に PDF を追加
+                pdf_name = f"{logger}_boxplot.pdf"
+                zip_file.writestr(pdf_name, pdf_bytes.getvalue())
+
+        # ZIP ファイルとしてダウンロード
+        st.download_button(
+            label="📥 ZIP をダウンロード",
+            data=zip_buffer.getvalue(),
+            file_name="logger_boxplots.zip",
+            mime="application/zip",
+        )
+            
     # ================================
     # ② ロガー間の相関マトリクス
     # ================================
