@@ -98,7 +98,6 @@ if uploaded:
             outdoor = outdoor.reset_index()
 
             st.success("外気データ取得 + 30分補間 完了")
-            st.write(outdoor.head())
 
         else:
             st.warning("外気データが取得できなかったため、外気比較はスキップします。")
@@ -124,9 +123,6 @@ if uploaded:
         df_merged["outdoor_temp"] = np.nan
         df_merged["outdoor_rh"] = np.nan
 
-    st.subheader("外気データ結合チェック")
-    st.write(df_merged[["datetime", "temperature_C", "outdoor_temp", "outdoor_rh"]].head())
-    st.write("外気温 NaN 数:", df_merged["outdoor_temp"].isna().sum())
 
     # ----------------------------
     # 4. ロガー選択
