@@ -526,13 +526,14 @@ if uploaded:
     st.subheader("保存基準との比較（ロガー別診断）")
 
     # --- 基準値をユーザー入力で設定
-    st.markdown("### 温度基準 (°C)")
-    TEMP_LOW = st.number_input("最低温度", value=18, step=0.1)
-    TEMP_HIGH = st.number_input("最高温度", value=22, step=0.1)
+    # 温度基準 (float)
+    TEMP_LOW = st.number_input("最低温度", value=18.0, step=0.1, format="%.1f")
+    TEMP_HIGH = st.number_input("最高温度", value=22.0, step=0.1, format="%.1f")
 
-    st.markdown("### 湿度基準 (%)")
-    RH_LOW = st.number_input("最低湿度", value=40, step=1)
-    RH_HIGH = st.number_input("最高湿度", value=50, step=1)
+    # 湿度基準 (整数で良ければ int に統一)
+    RH_LOW = st.number_input("最低湿度", value=40, step=1, format="%d")
+    RH_HIGH = st.number_input("最高湿度", value=50, step=1, format="%d")
+
 
     # --- ロガー別診断
     logger_summary = []
