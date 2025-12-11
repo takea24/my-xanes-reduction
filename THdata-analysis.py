@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-matplotlib.rcParams["font.family"] = "IPAGothic"   # 日本語フォント
+matplotlib.rcParams['font.family'] = 'DejaVu Sans'
 matplotlib.rcParams["axes.unicode_minus"] = False  # マイナス符号の文字化け防止
 
 from datetime import datetime
