@@ -375,54 +375,40 @@ if uploaded:
     )
     st.plotly_chart(fig_hum, use_container_width=True)
 
-    st.header("📦 各ロガーの箱ひげ図を PDF で一括ダウンロード")
-    if st.button("PDF を生成して ZIP でダウンロード"):
+    st.header("📦 各ロガーの箱ひげ図を ZIP で一括ダウンロード")
+    if st.button("ZIP を生成してダウンロード"):
 
-        # ZIP用バッファ
         zip_buffer = io.BytesIO()
 
         with zipfile.ZipFile(zip_buffer, "w") as zip_file:
 
-            # ロガー名一覧
-            loggers = df_merged["location"].unique()
-
-            for logger in loggers:
+            for logger in df_merged["location"].unique():
                 dlog = df_merged[df_merged["location"] == logger]
 
-                # Plotly 箱ひげ図（温度）
+                # 温度の箱ひげ図
                 fig_temp = px.box(
                     dlog,
                     x="month",
                     y="temperature_C",
                     color="year",
                     points="outliers",
-                    title=f"{logger} の月別温度（年別）箱ひげ図",
-                    labels={"month": "月", "temperature_C": "温度 (°C)", "year": "年"},
+                    title=f"{logger} の月別温度（年別）箱ひげ図"
                 )
 
-                # Plotly 箱ひげ図（湿度）
+                # 湿度の箱ひげ図
                 fig_hum = px.box(
                     dlog,
                     x="month",
                     y="humidity_RH",
                     color="year",
                     points="outliers",
-                    title=f"{logger} の月別湿度（年別）箱ひげ図",
-                    labels={"month": "月", "humidity_RH": "湿度 (%)", "year": "年"},
+                    title=f"{logger} の月別湿度（年別）箱ひげ図"
                 )
 
-                # PDF に変換（Plotly → PDF、kaleido 必須）
-                pdf_temp = io.BytesIO()
-                pdf_hum = io.BytesIO()
+                # HTML 文字列として ZIP に追加
+                zip_file.writestr(f"{logger}_temperature_boxplot.html", fig_temp.to_html(full_html=True))
+                zip_file.writestr(f"{logger}_humidity_boxplot.html", fig_hum.to_html(full_html=True))
 
-                fig_temp.write_image(pdf_temp, format="pdf")
-                fig_hum.write_image(pdf_hum, format="pdf")
-
-                # ZIP に追加
-                zip_file.writestr(f"{logger}_temperature_boxplot.pdf", pdf_temp.getvalue())
-                zip_file.writestr(f"{logger}_humidity_boxplot.pdf", pdf_hum.getvalue())
-
-        # ZIP ファイルとしてダウンロード
         st.download_button(
             label="📥 ZIP をダウンロード",
             data=zip_buffer.getvalue(),
