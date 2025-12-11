@@ -250,25 +250,46 @@ if uploaded:
     st.plotly_chart(fig, use_container_width=True)
 
     # ----------------------------
-    # 8. ロガー間比較（最新1週間）
+    # 8. ロガー間比較（任意期間）
     # ----------------------------
-    st.subheader("ロガー間比較：最新 1 週間の温度")
+    st.subheader("ロガー間比較：任意期間の温度")
 
-    latest_week = df_merged[df_merged["datetime"] >
-                            df_merged["datetime"].max() - pd.Timedelta(days=7)]
+    # --- 日付範囲指定 ---
+    min_date = df_merged["datetime"].min().date()
+    max_date = df_merged["datetime"].max().date()
 
+    start_date, end_date = st.date_input(
+        "表示する期間を選んでください",
+        value=(max_date - pd.Timedelta(days=7), max_date),
+        min_value=min_date,
+        max_value=max_date
+    )
+
+    # 入力された日付を datetime に変換
+    start_dt = pd.to_datetime(start_date)
+    end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1)  # 当日分を含めるため
+
+    # --- データ抽出 ---
+    selected_period = df_merged[
+        (df_merged["datetime"] >= start_dt) &
+        (df_merged["datetime"] < end_dt)
+    ]
+
+    # --- プロット ---
     fig, ax = plt.subplots(figsize=(10,5))
 
-    for loc in latest_week["location"].unique():
+    for loc in selected_period["location"].unique():
         ax.plot(
-            latest_week[latest_week["location"] == loc]["datetime"],
-            latest_week[latest_week["location"] == loc]["temperature_C"],
+            selected_period[selected_period["location"] == loc]["datetime"],
+            selected_period[selected_period["location"] == loc]["temperature_C"],
             label=loc
         )
 
     ax.legend()
     ax.set_ylabel("Temperature (°C)")
+    ax.set_title(f"期間: {start_date} 〜 {end_date}")
     st.pyplot(fig)
+
 
 else:
     st.info("館内データ CSV をアップロードしてください。")
