@@ -375,7 +375,8 @@ if uploaded:
     )
     st.plotly_chart(fig_hum, use_container_width=True)
 
-    st.header("📦 各ロガーの箱ひげ図を ZIP で一括ダウンロード")
+
+    st.header("📦 各ロガーの箱ひげ図を PNG で一括ダウンロード")
     if st.button("ZIP を生成してダウンロード"):
 
         zip_buffer = io.BytesIO()
@@ -405,14 +406,18 @@ if uploaded:
                     title=f"{logger} の月別湿度（年別）箱ひげ図"
                 )
 
-                # HTML 文字列として ZIP に追加
-                zip_file.writestr(f"{logger}_temperature_boxplot.html", fig_temp.to_html(full_html=True))
-                zip_file.writestr(f"{logger}_humidity_boxplot.html", fig_hum.to_html(full_html=True))
+                # PNG に変換
+                png_temp = fig_temp.to_image(format="png", width=800, height=600)
+                png_hum = fig_hum.to_image(format="png", width=800, height=600)
+
+                # ZIP に追加
+                zip_file.writestr(f"{logger}_temperature_boxplot.png", png_temp)
+                zip_file.writestr(f"{logger}_humidity_boxplot.png", png_hum)
 
         st.download_button(
             label="📥 ZIP をダウンロード",
             data=zip_buffer.getvalue(),
-            file_name="logger_boxplots.zip",
+            file_name="logger_boxplots_png.zip",
             mime="application/zip",
         )
 
