@@ -56,6 +56,7 @@ if uploaded:
     outdoor = None
 
     if METEOSTAT_AVAILABLE:
+        # 左京区（吉田本町付近）
         kyoto_point = Point(35.03, 135.78, 50)
 
         with st.spinner("外気データ取得中..."):
@@ -64,46 +65,50 @@ if uploaded:
             except Exception as e:
                 st.error(f"Meteostat 取得エラー: {e}")
                 outdoor = None
-        outdoor.index = outdoor.index.tz_localize("UTC").tz_convert("Asia/Tokyo")
-        outdoor.index = outdoor.index.tz_localize(None)
-        outdoor.reset_index(inplace=True)
 
         if outdoor is not None and len(outdoor) > 0:
+
+            # タイムゾーン処理
+            outdoor.index = outdoor.index.tz_localize("UTC").tz_convert("Asia/Tokyo")
+            outdoor.index = outdoor.index.tz_localize(None)
+
+            # 列に戻す
+            outdoor = outdoor.reset_index()
+
+            # 列名統一
             outdoor = outdoor.rename(columns={
+                "time": "datetime",
                 "temp": "outdoor_temp",
                 "rhum": "outdoor_rh"
             })
 
-            # index を datetime として確定させ、列に戻す
-            outdoor.index.name = "datetime"
-            outdoor = outdoor.reset_index()  # これだけでOK
+            # ------------------------------
+            # ここで 30分刻みに補間する
+            # ------------------------------
+            outdoor = outdoor.set_index("datetime")
+            outdoor = outdoor.resample("30T").interpolate()
+            outdoor = outdoor.reset_index()
 
-            st.success("外気データ取得完了")
+            st.success("外気データ取得 + 30分補間 完了")
+            st.write(outdoor.head())
+
         else:
             st.warning("外気データが取得できなかったため、外気比較はスキップします。")
             outdoor = None
 
-
     else:
         st.warning("Meteostat がインストールされていません。外気比較はスキップします。")
 
-    if outdoor is not None:
-        st.subheader("外気データ（先頭5行）")
-        st.write(outdoor.head())
-    else:
-        st.warning("外気データは取得されていません。")
-
+    # デバッグ用
     st.write("df datetime dtype:", df["datetime"].dtype)
-    st.write("outdoor datetime dtype:", outdoor["datetime"].dtype)
-
-    st.write("df head:", df.head())
-    st.write("outdoor head:", outdoor.head())
-
+    if outdoor is not None:
+        st.write("outdoor datetime dtype:", outdoor["datetime"].dtype)
 
     # ----------------------------
-    # 3. データ結合
+    # 3. データ結合（datetime で結合）
     # ----------------------------
     if outdoor is not None:
+
         df_merged = pd.merge(
             df,
             outdoor[["datetime", "outdoor_temp", "outdoor_rh"]],
@@ -115,12 +120,9 @@ if uploaded:
         df_merged["outdoor_temp"] = np.nan
         df_merged["outdoor_rh"] = np.nan
 
-        st.subheader("外気データ結合チェック")
-        st.write(df_merged[["datetime", "temperature_C", "outdoor_temp", "outdoor_rh"]].head(20))
-
-        st.write("外気温 NaN 数:", df_merged["outdoor_temp"].isna().sum())
-        st.write("外気湿度 NaN 数:", df_merged["outdoor_rh"].isna().sum())
-
+    st.subheader("外気データ結合チェック")
+    st.write(df_merged[["datetime", "temperature_C", "outdoor_temp", "outdoor_rh"]].head())
+    st.write("外気温 NaN 数:", df_merged["outdoor_temp"].isna().sum())
 
     # ----------------------------
     # 4. ロガー選択
