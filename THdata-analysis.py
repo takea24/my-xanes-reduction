@@ -199,12 +199,96 @@ if uploaded:
     selected_loggers = st.multiselect(
         "プロットするロガーを選択してください：",
         logger_list,
-        default=logger_list  # デフォルトは全ロガー
+        default=[selected_loc] # デフォルトは現在表示中のロガーだけ
     )
 
     import plotly.graph_objects as go
 
     fig = go.Figure()
+    # ---------------------------------------------------------
+    # 境界線の関数を定義
+    # ---------------------------------------------------------
+
+    T = np.linspace(0, 40, 400)
+
+    # (25,60) - (15,80)
+    H1 = 60 + (80 - 60) / (15 - 25) * (T - 25)
+
+    # (15,80) - (10,100)
+    H2 = 80 + (100 - 80) / (10 - 15) * (T - 15)
+
+    # (25,80) - (10,90)
+    H3 = 80 + (90 - 80) / (10 - 25) * (T - 25)
+
+    # =========================================================
+    # ① 淡赤（ライトレッド）領域
+    # =========================================================
+
+    # A: 温度 ≥25 & 湿度 ≥ 60
+    Ta = np.array([25, 40, 40, 25])
+    Ha = np.array([60, 60, 100, 100])
+
+    # B: 湿度60–80 & H>=H1
+    mask1 = (T <= 25) & (T >= 15)
+    Tb1 = T[mask1]
+    Hb1 = H1[mask1]
+
+    # C: 湿度80–100 & H>=H2
+    mask2 = (T <= 15) & (T >= 10)
+    Tc1 = T[mask2]
+    Hc1 = H2[mask2]
+
+    # 多角形として結合
+    T_light = np.concatenate([
+        Ta,
+        Tb1[::-1],
+        Tc1[::-1]
+    ])
+    H_light = np.concatenate([
+        Ha,
+        Hb1[::-1],
+        Hc1[::-1]
+    ])
+
+    fig.add_trace(go.Scatter(
+        x=T_light,
+        y=H_light,
+        fill="toself",
+        fillcolor="rgba(255,150,150,0.4)",
+        line=dict(color="rgba(0,0,0,0)"),
+        name="light red region"
+    ))
+
+    # =========================================================
+    # ② 赤（レッド）領域
+    # =========================================================
+
+    # A: 温度≥25 & 湿度≥80
+    Ta2 = np.array([25, 40, 40, 25])
+    Ha2 = np.array([80, 80, 100, 100])
+
+    # B: 湿度80–100 & H>=H3
+    mask3 = (T <= 25) & (T >= 10)
+    Tb2 = T[mask3]
+    Hb2 = H3[mask3]
+
+    T_red = np.concatenate([
+        Ta2,
+        Tb2[::-1]
+    ])
+    H_red = np.concatenate([
+        Ha2,
+        Hb2[::-1]
+    ])
+
+    fig.add_trace(go.Scatter(
+        x=T_red,
+        y=H_red,
+        fill="toself",
+        fillcolor="rgba(255,0,0,0.5)",
+        line=dict(color="rgba(0,0,0,0)"),
+        name="red region"
+    ))
 
     # 選ばれたロガーごとに作図
     for lg in selected_loggers:
