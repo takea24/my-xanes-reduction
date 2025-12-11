@@ -20,7 +20,7 @@ try:
 except:
     METEOSTAT_AVAILABLE = False
 
-st.title("館内温湿度モニタリング（外気比較付き）")
+st.title("館内温湿度ロガー解析（外気比較付き）")
 
 # ----------------------------
 # 1. CSV アップロード
@@ -523,18 +523,22 @@ if uploaded:
     # ================================
     # ③ 保存基準との比較（達成率）
     # ================================
-
     st.subheader("保存基準との比較（ロガー別診断）")
 
-    # --- 基準値
-    TEMP_LOW, TEMP_HIGH = 18, 22
-    RH_LOW, RH_HIGH = 40, 50
+    # --- 基準値をユーザー入力で設定
+    st.markdown("### 温度基準 (°C)")
+    TEMP_LOW = st.number_input("最低温度", value=18, step=0.1)
+    TEMP_HIGH = st.number_input("最高温度", value=22, step=0.1)
 
+    st.markdown("### 湿度基準 (%)")
+    RH_LOW = st.number_input("最低湿度", value=40, step=1)
+    RH_HIGH = st.number_input("最高湿度", value=50, step=1)
+
+    # --- ロガー別診断
     logger_summary = []
 
     for lg in sorted(df_merged["location"].unique()):
         sub = df_merged[df_merged["location"] == lg]
-
         total = len(sub)
 
         temp_good = ((sub["temperature_C"] >= TEMP_LOW) & (sub["temperature_C"] <= TEMP_HIGH)).sum()
