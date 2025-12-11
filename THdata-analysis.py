@@ -48,7 +48,7 @@ if uploaded:
     # ----------------------------
     st.subheader("外気データ取得（京都市左京区付近）")
 
-    start = df["datetime"].min()
+    start = df["datetime"].min() - pd.Timedelta(hours=9)
     end = df["datetime"].max()
 
     st.markdown(f"期間: **{start} 〜 {end}** の外気データ")
@@ -99,11 +99,7 @@ if uploaded:
     else:
         st.warning("Meteostat がインストールされていません。外気比較はスキップします。")
 
-    # デバッグ用
-    st.write("df datetime dtype:", df["datetime"].dtype)
-    if outdoor is not None:
-        st.write("outdoor datetime dtype:", outdoor["datetime"].dtype)
-
+    
     # ----------------------------
     # 3. データ結合（datetime で結合）
     # ----------------------------
