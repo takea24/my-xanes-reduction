@@ -189,8 +189,10 @@ if uploaded:
     # ----------------------------
     st.subheader("月別クリモグラフ（Temp–RH、ロガー別選択）")
 
-    # ★ 年 + 月 の Period を使う
-    df_merged["ym"] = df_merged["datetime"].dt.to_period("M")
+    # ★ 年・月・年月を作る（全てここで作る）
+    df_merged["year"]  = df_merged["datetime"].dt.year
+    df_merged["month"] = df_merged["datetime"].dt.month
+    df_merged["ym"]    = df_merged["datetime"].dt.to_period("M")
 
     # ロガー一覧
     logger_list = sorted(df_merged["location"].unique().tolist())
@@ -199,31 +201,38 @@ if uploaded:
     selected_loggers = st.multiselect(
         "プロットするロガーを選択してください：",
         logger_list,
-        default=[selected_loc] # デフォルトは現在表示中のロガーだけ
+        default=[selected_loc]
     )
 
     import plotly.graph_objects as go
 
     fig = go.Figure()
 
-    # 選ばれたロガーごとに作図
+    # ==========================================
+    # クリモグラフ表示用データ作成
+    # ==========================================
+    all_monthly = []
+
     for lg in selected_loggers:
 
-        # ★ 年月ごとに平均
+        # ★ 年月単位で平均
         monthly = (
             df_merged[df_merged["location"] == lg]
-            .groupby("ym")
+            .groupby(["year", "month", "ym"])
             .agg(
                 temperature=("temperature_C", "mean"),
                 humidity=("humidity_RH", "mean")
             )
             .reset_index()
+            .assign(logger=lg)
         )
 
-        # ★ プロットの順序を chronological に
-        monthly = monthly.sort_values("ym")
+        all_monthly.append(monthly)
 
-        # ★ ホバーとラベル用（2024-01 形式）
+        # 年月の昇順
+        monthly = monthly.sort_values(["year", "month"])
+
+        # 表示用ラベル
         monthly["label"] = monthly["ym"].astype(str)
 
         fig.add_trace(
@@ -232,7 +241,7 @@ if uploaded:
                 y=monthly["temperature"],
                 mode="lines+markers+text",
                 name=lg,
-                text=monthly["label"],          # ← 年月ラベル表示
+                text=monthly["label"],   # ← 年月表示
                 textposition="middle right",
                 hovertemplate=(
                     "年月: %{text}<br>"
@@ -253,38 +262,18 @@ if uploaded:
     st.plotly_chart(fig, use_container_width=True)
 
     # ==========================================
-    # クリモグラフ用に使用したデータをまとめる
+    # クリモグラフに使用したデータを結合
     # ==========================================
-
-    all_monthly = []  # すべてのロガーの月平均データをここに保存
-
-    for lg in selected_loggers:
-
-        monthly = (
-            df_merged[df_merged["location"] == lg]
-            .groupby(["year", "month"])   # ← ★ 年も区別
-            .agg(
-                temperature=("temperature_C", "mean"),
-                humidity=("humidity_RH", "mean")
-            )
-            .reset_index()
-            .assign(logger=lg)
-        )
-
-        all_monthly.append(monthly)
-
-    # すべて結合した表
     df_monthly_all = pd.concat(all_monthly, ignore_index=True)
 
     # ==========================================
     # データ表示
     # ==========================================
     st.subheader("クリモグラフで使用した月別平均データ")
-
     st.dataframe(df_monthly_all)
 
     # ==========================================
-    # CSV ダウンロードボタン
+    # CSV ダウンロード
     # ==========================================
     csv = df_monthly_all.to_csv(index=False).encode("utf-8")
 
@@ -294,7 +283,7 @@ if uploaded:
         file_name="climograph_monthly_data.csv",
         mime="text/csv"
     )
-    
+
 
     # ----------------------------
     # 8. ロガー間比較（任意期間）
