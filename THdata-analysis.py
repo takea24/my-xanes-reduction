@@ -344,6 +344,7 @@ if uploaded:
 
     df_box = df_merged[df_merged["location"] == logger_for_box]
 
+    st.write("箱：中央値±25%のデータ範囲(ばらつきの指標), ヒゲ：箱外の最大/最小値の1.5倍までの範囲（通常のデータ範囲）,それ以外はハズレ値")
     # 温度の箱ひげ図
     fig_temp = px.box(
         df_box,
