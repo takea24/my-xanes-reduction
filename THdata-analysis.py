@@ -370,6 +370,24 @@ if uploaded:
     ax.set_title(f"Period: {start_date} ~ {end_date}")
     st.pyplot(fig)
 
+    # プロット
+    fig_h, ax_h = plt.subplots(figsize=(10,5))
+
+    for loc in selected_period["location"].unique():
+        ax_h.plot(
+            selected_period[selected_period["location"] == loc]["datetime"],
+            selected_period[selected_period["location"] == loc]["humidity_RH"],
+            label=loc
+        )
+
+    ax_h.legend()
+    ax_h.set_ylabel("Relative Humidity (%)")
+    ax_h.set_title(f"Period: {start_date} ~ {end_date}")
+    st.pyplot(fig_h)
+
+
+    
+
     # ================================
     # ① 月別箱ひげ図（ロガー別の季節変動）
     # ================================
