@@ -387,7 +387,7 @@ if uploaded:
 
     df_box = df_merged[df_merged["location"] == logger_for_box]
 
-    st.write("箱：中央値±25%のデータ範囲(ばらつきの指標)")
+    st.write("箱：50%のデータ範囲(ばらつきの指標)+中央値")
     st.write("ヒゲ：箱外の最大/最小値の1.5倍までの範囲（通常のデータ範囲）")
     st.write("それ以外はハズレ値")
 
