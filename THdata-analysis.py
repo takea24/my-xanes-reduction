@@ -124,6 +124,8 @@ if uploaded:
         df_merged["outdoor_rh"] = np.nan
 
 
+    st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)
+
     # ----------------------------
     # 4. ロガー選択（複数選択）
     # ----------------------------
