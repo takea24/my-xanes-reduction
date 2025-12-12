@@ -49,7 +49,6 @@ if uploaded:
         st.stop()
 
     st.success("CSV を読み込みました")
-    st.write(df.head())
 
     # ----------------------------
     # 2. 外気データ取得（京都 左京区付近）
@@ -147,7 +146,7 @@ if uploaded:
     # ----------------------------
     logger_list = sorted(df_merged["location"].unique().tolist())
     selected_compare_locs = st.multiselect(
-        "表示するロガーを選んでください（複数可）",
+        "表示するロガー（または外気）を選んでください（複数可）",
         logger_list,
         default=logger_list  # 初期は全部
     )
