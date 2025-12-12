@@ -240,12 +240,13 @@ if uploaded:
     # ロガー一覧
     logger_list = sorted(df_merged["location"].unique().tolist())
 
-    # 複数ロガー選択
     selected_loggers = st.multiselect(
         "プロットするロガーを選択してください：",
-        logger_list,
-        default=[selected_loc]
+        options=logger_list,
+        default=[logger_list[0]] if len(logger_list) > 0 else []  # ここを修正
     )
+
+
 
     import plotly.graph_objects as go
 
