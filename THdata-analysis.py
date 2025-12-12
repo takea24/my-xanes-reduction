@@ -255,9 +255,9 @@ if uploaded:
         # 温度グラフ
         st.subheader(f"{loc} の温度の比較（館内 vs 外気）")
         fig, ax = plt.subplots(figsize=(10,4))
-        ax.plot(df_loc["datetime"], df_loc["temperature_C"], label=f"{loc}(KUM)")
+        ax.plot(df_loc["datetime"], df_loc["temperature_C"], label=f"{loc}(KUM)", color="tab:red")
         if outdoor is not None and show_outdoor:
-            ax.plot(df_loc["datetime"], df_loc["outdoor_temp"], label="Kyoto Meteostat", alpha=0.6)
+            ax.plot(df_loc["datetime"], df_loc["outdoor_temp"], label="Kyoto Meteostat", alpha=0.6, color="tab:blue")
         ax.set_ylabel("Temperature (°C)")
         ax.legend()
         st.pyplot(fig)
@@ -267,7 +267,7 @@ if uploaded:
         fig, ax = plt.subplots(figsize=(10,4))
         ax.plot(df_loc["datetime"], df_loc["humidity_RH"], label=f"{loc}(KUM)")
         if outdoor is not None and show_outdoor:
-            ax.plot(df_loc["datetime"], df_loc["outdoor_rh"], label="Kyoto Meteostat", alpha=0.6)
+            ax.plot(df_loc["datetime"], df_loc["outdoor_rh"], label="Kyoto Meteostat", alpha=0.6, color="tab:green")
         ax.set_ylabel("Relative Humidity (%)")
         ax.legend()
         st.pyplot(fig)
@@ -297,7 +297,7 @@ if uploaded:
 
                 # --- 湿度グラフ ---
                 fig, ax = plt.subplots(figsize=(10,4))
-                ax.plot(df_loc["datetime"], df_loc["humidity_RH"], label=f"{loc}(KUM)")
+                ax.plot(df_loc["datetime"], df_loc["humidity_RH"], label=f"{loc}(KUM)", color="tab:orange")
                 if outdoor is not None and show_outdoor:
                     ax.plot(df_loc["datetime"], df_loc["outdoor_rh"], label="Kyoto Meteostat", alpha=0.6)
                 ax.set_ylabel("Relative Humidity (%)")
