@@ -123,7 +123,7 @@ if uploaded:
             "outdoor_temp": "temperature_C",
             "outdoor_rh": "humidity_RH"
         }).copy()
-        outdoor_long["location"] = "outdoor"
+        outdoor_long["location"] = "Kyoto Meteostat(outside)"
 
         df_merged = pd.concat([df_merged, outdoor_long[["datetime", "location", "temperature_C", "humidity_RH"]]])
         df_merged = df_merged.sort_values("datetime").reset_index(drop=True)
@@ -152,8 +152,6 @@ if uploaded:
         default=logger_list  # 初期は全部
     )
 
-    # 外気を表示するかどうか
-    show_outdoor = st.checkbox("外気（Kyoto Meteostat）を表示する", value=False)
 
 
     # ----------------------------
@@ -192,14 +190,6 @@ if uploaded:
         sub = selected_period[selected_period["location"] == loc]
         ax.plot(sub["datetime"], sub["temperature_C"], label=loc)
 
-    # 外気
-    if show_outdoor and outdoor is not None:
-        outdoor_range = outdoor[
-            (outdoor["datetime"] >= start_dt) & (outdoor["datetime"] < end_dt)
-        ]
-        ax.plot(outdoor_range["datetime"], outdoor_range["outdoor_temp"],
-                label="Kyoto Meteostat", alpha=0.7)
-
     ax.legend()
     ax.set_ylabel("Temperature (°C)")
     ax.set_title(f"Period: {start_date} ~ {end_date}")
@@ -213,14 +203,6 @@ if uploaded:
     for loc in selected_compare_locs:
         sub = selected_period[selected_period["location"] == loc]
         ax_h.plot(sub["datetime"], sub["humidity_RH"], label=loc)
-
-    # 外気
-    if show_outdoor and outdoor is not None:
-        outdoor_range = outdoor[
-            (outdoor["datetime"] >= start_dt) & (outdoor["datetime"] < end_dt)
-        ]
-        ax_h.plot(outdoor_range["datetime"], outdoor_range["outdoor_rh"],
-                      label="Kyoto Meteostat", alpha=0.7)
 
     ax_h.legend()
     ax_h.set_ylabel("Relative Humidity (%)")
