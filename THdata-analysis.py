@@ -656,8 +656,8 @@ if uploaded:
         logger_summary.append({
             "location": lg,
             "総サンプル数": total,
-            "温度が基準内 (%)": temp_good / total * 100,
-            "湿度が基準内 (%)": rh_good / total * 100,
+            "温度が基準内 (%)": round(temp_good / total * 100, 1),
+            "湿度が基準内 (%)": round(rh_good / total * 100, 1),
             "温度逸脱回数": total - temp_good,
             "湿度逸脱回数": total - rh_good,
         })
