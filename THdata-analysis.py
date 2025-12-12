@@ -181,6 +181,52 @@ if uploaded:
         ax.legend()
         st.pyplot(fig)
 
+    if st.button("📥 選択ロガーの全グラフを一括保存（PNG）"):
+
+        zip_buffer = io.BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+
+            for loc in selected_locs:
+                df_loc = df_view[df_view["location"] == loc]
+
+                # --- 温度グラフ ---
+                fig, ax = plt.subplots(figsize=(10,4))
+                ax.plot(df_loc["datetime"], df_loc["temperature_C"], label=f"{loc}(KUM)")
+                if outdoor is not None:
+                    ax.plot(df_loc["datetime"], df_loc["outdoor_temp"], label="Kyoto Meteostat", alpha=0.6)
+                ax.set_ylabel("Temperature (°C)")
+                ax.legend()
+                ax.set_title(f"{loc} 温度")
+                
+                png_bytes = io.BytesIO()
+                fig.savefig(png_bytes, format="png", bbox_inches="tight")
+                plt.close(fig)
+                zip_file.writestr(f"{loc}_temperature.png", png_bytes.getvalue())
+
+                # --- 湿度グラフ ---
+                fig, ax = plt.subplots(figsize=(10,4))
+                ax.plot(df_loc["datetime"], df_loc["humidity_RH"], label=f"{loc}(KUM)")
+                if outdoor is not None:
+                    ax.plot(df_loc["datetime"], df_loc["outdoor_rh"], label="Kyoto Meteostat", alpha=0.6)
+                ax.set_ylabel("Relative Humidity (%)")
+                ax.legend()
+                ax.set_title(f"{loc} 湿度")
+                
+                png_bytes = io.BytesIO()
+                fig.savefig(png_bytes, format="png", bbox_inches="tight")
+                plt.close(fig)
+                zip_file.writestr(f"{loc}_humidity.png", png_bytes.getvalue())
+
+        # ZIP をダウンロード
+        st.download_button(
+            label="📥 ZIP をダウンロード",
+            data=zip_buffer.getvalue(),
+            file_name="logger_graphs.zip",
+            mime="application/zip"
+        )
+
+
     # ----------------------------
     # 7. 月別クリモグラフ（ロガー別 Temp–RH）
     # ----------------------------
