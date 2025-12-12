@@ -125,22 +125,25 @@ if uploaded:
 
 
     # ----------------------------
-    # 4. ロガー選択
+    # 4. ロガー選択（複数選択）
     # ----------------------------
     st.subheader("ロガー選択")
 
-    locations = df_merged["location"].unique()
-    selected_loc = st.selectbox("表示するロガーを選んでください", locations)
-
-    df_loc = df_merged[df_merged["location"] == selected_loc]
+    locations = sorted(df_merged["location"].unique())
+    selected_locs = st.multiselect(
+        "表示するロガーを選んでください（複数可）",
+        options=locations,
+        default=[locations[0]]  # 初期値
+    )
 
     # ----------------------------
     # 期間選択（横軸の幅）
     # ----------------------------
     st.subheader("表示期間の選択")
 
-    min_time = pd.to_datetime(df_loc["datetime"].min()).to_pydatetime()
-    max_time = pd.to_datetime(df_loc["datetime"].max()).to_pydatetime()
+    df_selected = df_merged[df_merged["location"].isin(selected_locs)]
+    min_time = pd.to_datetime(df_selected["datetime"].min()).to_pydatetime()
+    max_time = pd.to_datetime(df_selected["datetime"].max()).to_pydatetime()
 
     start_time, end_time = st.slider(
         "表示する期間を選択してください",
@@ -150,39 +153,33 @@ if uploaded:
         format="YYYY-MM-DD HH:mm"
     )
 
-    # 選択期間でフィルタ
-    df_view = df_loc[(df_loc["datetime"] >= start_time) & (df_loc["datetime"] <= end_time)]
-
+    df_view = df_selected[(df_selected["datetime"] >= start_time) & (df_selected["datetime"] <= end_time)]
 
     # ----------------------------
-    # 5. 温度：館内 vs 外気
+    # 各ロガーごとに個別グラフを作成
     # ----------------------------
-    st.subheader("温度の比較（館内 vs 外気）")
+    for loc in selected_locs:
+        df_loc = df_view[df_view["location"] == loc]
 
-    fig, ax = plt.subplots(figsize=(10,4))
-    ax.plot(df_view["datetime"], df_view["temperature_C"], label=f"{selected_loc}(KUM)")
+        # 温度グラフ
+        st.subheader(f"{loc} の温度の比較（館内 vs 外気）")
+        fig, ax = plt.subplots(figsize=(10,4))
+        ax.plot(df_loc["datetime"], df_loc["temperature_C"], label=f"{loc}(KUM)")
+        if outdoor is not None:
+            ax.plot(df_loc["datetime"], df_loc["outdoor_temp"], label="Kyoto Meteostat", alpha=0.6)
+        ax.set_ylabel("Temperature (°C)")
+        ax.legend()
+        st.pyplot(fig)
 
-    if outdoor is not None:
-        ax.plot(df_view["datetime"], df_view["outdoor_temp"], label="Kyoto Meteostat", alpha=0.6)
-
-    ax.set_ylabel("Temperature (°C)")
-    ax.legend()
-    st.pyplot(fig)
-
-    # ----------------------------
-    # 6. 湿度：館内 vs 外気
-    # ----------------------------
-    st.subheader("湿度の比較（館内 vs 外気）")
-
-    fig, ax = plt.subplots(figsize=(10,4))
-    ax.plot(df_view["datetime"], df_view["humidity_RH"], label=f"{selected_loc}(KUM)")
-
-    if outdoor is not None:
-        ax.plot(df_view["datetime"], df_view["outdoor_rh"], label="Kyoto Meteostat", alpha=0.6)
-
-    ax.set_ylabel("Relative Humidity (%)")
-    ax.legend()
-    st.pyplot(fig)
+        # 湿度グラフ
+        st.subheader(f"{loc} の湿度の比較（館内 vs 外気）")
+        fig, ax = plt.subplots(figsize=(10,4))
+        ax.plot(df_loc["datetime"], df_loc["humidity_RH"], label=f"{loc}(KUM)")
+        if outdoor is not None:
+            ax.plot(df_loc["datetime"], df_loc["outdoor_rh"], label="Kyoto Meteostat", alpha=0.6)
+        ax.set_ylabel("Relative Humidity (%)")
+        ax.legend()
+        st.pyplot(fig)
 
     # ----------------------------
     # 7. 月別クリモグラフ（ロガー別 Temp–RH）
