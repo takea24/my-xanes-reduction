@@ -209,7 +209,7 @@ if uploaded:
         outdoor_range = outdoor[
             (outdoor["datetime"] >= start_dt) & (outdoor["datetime"] < end_dt)
         ]
-            ax_h.plot(outdoor_range["datetime"], outdoor_range["outdoor_rh"],
+        ax_h.plot(outdoor_range["datetime"], outdoor_range["outdoor_rh"],
                       label="Kyoto Meteostat", alpha=0.7)
 
     ax_h.legend()
