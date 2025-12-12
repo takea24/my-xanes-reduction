@@ -228,6 +228,7 @@ if uploaded:
             mime="application/zip"
         )
 
+    st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)
 
     # ----------------------------
     # 7. 月別クリモグラフ（ロガー別 Temp–RH）
@@ -330,6 +331,7 @@ if uploaded:
         mime="text/csv"
     )
 
+    st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)
 
     # ----------------------------
     # 8. ロガー間比較（任意期間）
@@ -388,7 +390,7 @@ if uploaded:
     st.pyplot(fig_h)
 
 
-    
+    st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)    
 
     # ================================
     # ① 月別箱ひげ図（ロガー別の季節変動）
@@ -536,6 +538,7 @@ if uploaded:
             mime="application/zip",
         )
 
+    st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)
             
     # ================================
     # ② ロガー間の相関マトリクス
@@ -586,6 +589,7 @@ if uploaded:
 
     st.caption("相関係数 1.0 に近いほど、温度/湿度の変動パターンが似ているロガーです。")
 
+    st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)
 
     # ================================
     # ③ 保存基準との比較（達成率）
