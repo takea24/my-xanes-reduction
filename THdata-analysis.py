@@ -590,12 +590,20 @@ if uploaded:
         values="temperature_C"
     )
 
+    # 外気温を追加（datetime を index に揃える）
+    temp_pivot["outdoor_temp"] = df_merged.set_index("datetime")["outdoor_temp"]
+
+
     # --- ロガー×時間 の pivot（湿度）
     rh_pivot = df_merged.pivot_table(
         index="datetime",
         columns="location",
         values="humidity_RH"
     )
+
+    # 外気湿度を追加
+    rh_pivot["outdoor_rh"] = df_merged.set_index("datetime")["outdoor_rh"]
+
 
     # 相関計算
     temp_corr = temp_pivot.corr()
@@ -610,7 +618,7 @@ if uploaded:
         text_auto=".2f",         # 有効数字2桁
         aspect="auto",
         color_continuous_scale=color_map,
-        title="ロガー間の相関（温度）"
+        title="ロガー・外気間の相関（温度）"
     )
     st.plotly_chart(fig_temp_corr, use_container_width=True)
 
@@ -620,7 +628,7 @@ if uploaded:
         text_auto=".2f",         # 有効数字2桁
         aspect="auto",
         color_continuous_scale=color_map,
-        title="ロガー間の相関（湿度）"
+        title="ロガー・外気間の相関（湿度）"
     )
     st.plotly_chart(fig_rh_corr, use_container_width=True)
 
