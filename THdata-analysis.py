@@ -222,7 +222,7 @@ if uploaded:
     # ----------------------------
     # 4. ロガー選択（複数選択）
     # ----------------------------
-    st.subheader("ロガー選択")
+    st.subheader("ロガー別グラフ（個別保存用）")
 
     locations = sorted(df_merged["location"].unique())
     selected_locs = st.multiselect(
