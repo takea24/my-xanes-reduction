@@ -106,7 +106,6 @@ if uploaded:
     else:
         st.warning("Meteostat がインストールされていません。外気比較はスキップします。")
 
-    
     # ----------------------------
     # 3. データ結合（datetime で結合）
     # ----------------------------
@@ -118,6 +117,17 @@ if uploaded:
             on="datetime",
             how="left"
         )
+
+        # 🔥 外気を location='outdoor' として追加する処理
+        outdoor_long = outdoor.rename(columns={
+            "outdoor_temp": "temperature_C",
+            "outdoor_rh": "humidity_RH"
+        }).copy()
+        outdoor_long["location"] = "outdoor"
+
+        df_merged = pd.concat([df_merged, outdoor_long[["datetime", "location", "temperature_C", "humidity_RH"]]])
+        df_merged = df_merged.sort_values("datetime").reset_index(drop=True)
+
     else:
         df_merged = df.copy()
         df_merged["outdoor_temp"] = np.nan
@@ -590,20 +600,12 @@ if uploaded:
         values="temperature_C"
     )
 
-    # 外気温を追加（datetime を index に揃える）
-    temp_pivot["outdoor_temp"] = df_merged.set_index("datetime")["outdoor_temp"]
-
-
     # --- ロガー×時間 の pivot（湿度）
     rh_pivot = df_merged.pivot_table(
         index="datetime",
         columns="location",
         values="humidity_RH"
     )
-
-    # 外気湿度を追加
-    rh_pivot["outdoor_rh"] = df_merged.set_index("datetime")["outdoor_rh"]
-
 
     # 相関計算
     temp_corr = temp_pivot.corr()
