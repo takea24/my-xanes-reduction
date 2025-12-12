@@ -242,6 +242,10 @@ if uploaded:
 
     df_view = df_selected[(df_selected["datetime"] >= start_time) & (df_selected["datetime"] <= end_time)]
 
+    # 外気データをグラフに表示するか？
+    show_outdoor = st.checkbox("外気（Kyoto Meteostat）をグラフに表示する", value=True)
+
+
     # ----------------------------
     # 各ロガーごとに個別グラフを作成
     # ----------------------------
@@ -252,7 +256,7 @@ if uploaded:
         st.subheader(f"{loc} の温度の比較（館内 vs 外気）")
         fig, ax = plt.subplots(figsize=(10,4))
         ax.plot(df_loc["datetime"], df_loc["temperature_C"], label=f"{loc}(KUM)")
-        if outdoor is not None:
+        if outdoor is not None and show_outdoor:
             ax.plot(df_loc["datetime"], df_loc["outdoor_temp"], label="Kyoto Meteostat", alpha=0.6)
         ax.set_ylabel("Temperature (°C)")
         ax.legend()
@@ -262,7 +266,7 @@ if uploaded:
         st.subheader(f"{loc} の湿度の比較（館内 vs 外気）")
         fig, ax = plt.subplots(figsize=(10,4))
         ax.plot(df_loc["datetime"], df_loc["humidity_RH"], label=f"{loc}(KUM)")
-        if outdoor is not None:
+        if outdoor is not None and show_outdoor:
             ax.plot(df_loc["datetime"], df_loc["outdoor_rh"], label="Kyoto Meteostat", alpha=0.6)
         ax.set_ylabel("Relative Humidity (%)")
         ax.legend()
@@ -280,7 +284,7 @@ if uploaded:
                 # --- 温度グラフ ---
                 fig, ax = plt.subplots(figsize=(10,4))
                 ax.plot(df_loc["datetime"], df_loc["temperature_C"], label=f"{loc}(KUM)")
-                if outdoor is not None:
+                if outdoor is not None and show_outdoor:
                     ax.plot(df_loc["datetime"], df_loc["outdoor_temp"], label="Kyoto Meteostat", alpha=0.6)
                 ax.set_ylabel("Temperature (°C)")
                 ax.legend()
@@ -294,7 +298,7 @@ if uploaded:
                 # --- 湿度グラフ ---
                 fig, ax = plt.subplots(figsize=(10,4))
                 ax.plot(df_loc["datetime"], df_loc["humidity_RH"], label=f"{loc}(KUM)")
-                if outdoor is not None:
+                if outdoor is not None and show_outdoor:
                     ax.plot(df_loc["datetime"], df_loc["outdoor_rh"], label="Kyoto Meteostat", alpha=0.6)
                 ax.set_ylabel("Relative Humidity (%)")
                 ax.legend()
