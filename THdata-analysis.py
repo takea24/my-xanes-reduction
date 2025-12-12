@@ -227,107 +227,6 @@ if uploaded:
         )
 
 
-    # ----------------------------
-    # 7. 月別クリモグラフ（ロガー別 Temp–RH）
-    # ----------------------------
-    st.subheader("月別クリモグラフ（Temp–RH、ロガー別選択）")
-
-    # ★ 年・月・年月を作る（全てここで作る）
-    df_merged["year"]  = df_merged["datetime"].dt.year
-    df_merged["month"] = df_merged["datetime"].dt.month
-    df_merged["ym"]    = df_merged["datetime"].dt.to_period("M")
-
-    # ロガー一覧
-    logger_list = sorted(df_merged["location"].unique().tolist())
-
-    selected_loggers = st.multiselect(
-        "プロットするロガーを選択してください：",
-        options=logger_list,
-        default=[logger_list[0]] if len(logger_list) > 0 else []  # ここを修正
-    )
-
-
-
-    import plotly.graph_objects as go
-
-    fig = go.Figure()
-
-    # ==========================================
-    # クリモグラフ表示用データ作成
-    # ==========================================
-    all_monthly = []
-
-    for lg in selected_loggers:
-
-        # ★ 年月単位で平均
-        monthly = (
-            df_merged[df_merged["location"] == lg]
-            .groupby(["year", "month", "ym"])
-            .agg(
-                temperature=("temperature_C", "mean"),
-                humidity=("humidity_RH", "mean")
-            )
-            .reset_index()
-            .assign(logger=lg)
-        )
-
-        all_monthly.append(monthly)
-
-        # 年月の昇順
-        monthly = monthly.sort_values(["year", "month"])
-
-        # 表示用ラベル
-        monthly["label"] = monthly["ym"].astype(str)
-
-        fig.add_trace(
-            go.Scatter(
-                x=monthly["humidity"],
-                y=monthly["temperature"],
-                mode="lines+markers+text",
-                name=lg,
-                text=monthly["label"],   # ← 年月表示
-                textposition="middle right",
-                hovertemplate=(
-                    "年月: %{text}<br>"
-                    "湿度: %{x:.1f}%<br>"
-                    "温度: %{y:.1f}℃<extra></extra>"
-                )
-            )
-        )
-
-    fig.update_layout(
-        title="月別クリモグラフ（温度 vs 湿度）",
-        xaxis_title="湿度 (%)",
-        yaxis_title="温度 (°C)",
-        width=800,
-        height=600
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    # ==========================================
-    # クリモグラフに使用したデータを結合
-    # ==========================================
-    df_monthly_all = pd.concat(all_monthly, ignore_index=True)
-
-    # ==========================================
-    # データ表示
-    # ==========================================
-    st.subheader("クリモグラフで使用した月別平均データ")
-    st.dataframe(df_monthly_all)
-
-    # ==========================================
-    # CSV ダウンロード
-    # ==========================================
-    csv = df_monthly_all.to_csv(index=False).encode("utf-8")
-
-    st.download_button(
-        label="📥 月別平均データを CSV でダウンロード",
-        data=csv,
-        file_name="climograph_monthly_data.csv",
-        mime="text/csv"
-    )
-
 
     # ----------------------------
     # 8. ロガー間比較（任意期間）
@@ -631,6 +530,108 @@ if uploaded:
         file_name="environment_criteria_report.csv",
         mime="text/csv"
     )
+
+
+        # ----------------------------
+        # 7. 月別クリモグラフ（ロガー別 Temp–RH）
+        # ----------------------------
+        st.subheader("月別クリモグラフ（Temp–RH、ロガー別選択）")
+
+        # ★ 年・月・年月を作る（全てここで作る）
+        df_merged["year"]  = df_merged["datetime"].dt.year
+        df_merged["month"] = df_merged["datetime"].dt.month
+        df_merged["ym"]    = df_merged["datetime"].dt.to_period("M")
+
+        # ロガー一覧
+        logger_list = sorted(df_merged["location"].unique().tolist())
+
+        selected_loggers = st.multiselect(
+            "プロットするロガーを選択してください：",
+            options=logger_list,
+            default=[logger_list[0]] if len(logger_list) > 0 else []  # ここを修正
+        )
+
+
+
+        import plotly.graph_objects as go
+
+        fig = go.Figure()
+
+        # ==========================================
+        # クリモグラフ表示用データ作成
+        # ==========================================
+        all_monthly = []
+
+        for lg in selected_loggers:
+
+            # ★ 年月単位で平均
+            monthly = (
+                df_merged[df_merged["location"] == lg]
+                .groupby(["year", "month", "ym"])
+                .agg(
+                    temperature=("temperature_C", "mean"),
+                    humidity=("humidity_RH", "mean")
+                )
+                .reset_index()
+                .assign(logger=lg)
+            )
+
+            all_monthly.append(monthly)
+
+            # 年月の昇順
+            monthly = monthly.sort_values(["year", "month"])
+
+            # 表示用ラベル
+            monthly["label"] = monthly["ym"].astype(str)
+
+            fig.add_trace(
+                go.Scatter(
+                    x=monthly["humidity"],
+                    y=monthly["temperature"],
+                    mode="lines+markers+text",
+                    name=lg,
+                    text=monthly["label"],   # ← 年月表示
+                    textposition="middle right",
+                    hovertemplate=(
+                        "年月: %{text}<br>"
+                        "湿度: %{x:.1f}%<br>"
+                        "温度: %{y:.1f}℃<extra></extra>"
+                    )
+                )
+            )
+
+        fig.update_layout(
+            title="月別クリモグラフ（温度 vs 湿度）",
+            xaxis_title="湿度 (%)",
+            yaxis_title="温度 (°C)",
+            width=800,
+            height=600
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+        # ==========================================
+        # クリモグラフに使用したデータを結合
+        # ==========================================
+        df_monthly_all = pd.concat(all_monthly, ignore_index=True)
+
+        # ==========================================
+        # データ表示
+        # ==========================================
+        st.subheader("クリモグラフで使用した月別平均データ")
+        st.dataframe(df_monthly_all)
+
+        # ==========================================
+        # CSV ダウンロード
+        # ==========================================
+        csv = df_monthly_all.to_csv(index=False).encode("utf-8")
+
+        st.download_button(
+            label="📥 月別平均データを CSV でダウンロード",
+            data=csv,
+            file_name="climograph_monthly_data.csv",
+            mime="text/csv"
+        )
 
 
 else:
