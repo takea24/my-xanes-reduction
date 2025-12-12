@@ -126,12 +126,29 @@ if uploaded:
 
     st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)
 
+
     # ----------------------------
     # 8. ロガー間比較 （任意期間）
     # ----------------------------
     st.subheader("ロガー間比較(重ねて表示)：任意期間の温度・湿度")
 
-    # --- 日付範囲指定 ---
+    # ----------------------------
+    # 表示するロガー選択（複数可）
+    # ----------------------------
+    logger_list = sorted(df_merged["location"].unique().tolist())
+    selected_compare_locs = st.multiselect(
+        "表示するロガーを選んでください（複数可）",
+        logger_list,
+        default=logger_list  # 初期は全部
+    )
+
+    # 外気を表示するかどうか
+    show_outdoor = st.checkbox("外気（Kyoto Meteostat）を表示する", value=False)
+
+
+    # ----------------------------
+    # 日付範囲指定
+    # ----------------------------
     min_date = df_merged["datetime"].min().date()
     max_date = df_merged["datetime"].max().date()
 
@@ -142,49 +159,60 @@ if uploaded:
         max_value=max_date
     )
 
-    # 入力された日付を datetime に変換
+    # datetime に変換
     start_dt = pd.to_datetime(start_date)
-    end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1)  # 当日分を含めるため
+    end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1)
 
-    # --- データ抽出 ---
+    # ----------------------------
+    # データ抽出：ロガー選択 + 日付範囲
+    # ----------------------------
     selected_period = df_merged[
+        (df_merged["location"].isin(selected_compare_locs)) &
         (df_merged["datetime"] >= start_dt) &
         (df_merged["datetime"] < end_dt)
     ]
 
-    # --- プロット ---
+    # ----------------------------
+    # プロット：温度
+    # ----------------------------
     fig, ax = plt.subplots(figsize=(10,5))
 
-    for loc in selected_period["location"].unique():
-        ax.plot(
-            selected_period[selected_period["location"] == loc]["datetime"],
-            selected_period[selected_period["location"] == loc]["temperature_C"],
-            label=loc
-        )
+    # ロガー別にプロット
+    for loc in selected_compare_locs:
+        sub = selected_period[selected_period["location"] == loc]
+        ax.plot(sub["datetime"], sub["temperature_C"], label=loc)
+
+    # 外気
+    if show_outdoor and outdoor is not None:
+        outdoor_range = outdoor[(outdoor.index >= start_dt) & (outdoor.index < end_dt)]
+        ax.plot(outdoor_range.index, outdoor_range["temp"], label="Kyoto Meteostat", alpha=0.7)
 
     ax.legend()
     ax.set_ylabel("Temperature (°C)")
     ax.set_title(f"Period: {start_date} ~ {end_date}")
     st.pyplot(fig)
 
-    # プロット
+    # ----------------------------
+    # プロット：湿度
+    # ----------------------------
     fig_h, ax_h = plt.subplots(figsize=(10,5))
 
-    for loc in selected_period["location"].unique():
-        ax_h.plot(
-            selected_period[selected_period["location"] == loc]["datetime"],
-            selected_period[selected_period["location"] == loc]["humidity_RH"],
-            label=loc
-        )
+    for loc in selected_compare_locs:
+        sub = selected_period[selected_period["location"] == loc]
+        ax_h.plot(sub["datetime"], sub["humidity_RH"], label=loc)
+
+    # 外気
+    if show_outdoor and outdoor is not None:
+        outdoor_range = outdoor[(outdoor.index >= start_dt) & (outdoor.index < end_dt)]
+        if "rhum" in outdoor_range.columns:  # Meteostat は 'rhum' が湿度
+            ax_h.plot(outdoor_range.index, outdoor_range["rhum"], label="Kyoto Meteostat", alpha=0.7)
 
     ax_h.legend()
     ax_h.set_ylabel("Relative Humidity (%)")
     ax_h.set_title(f"Period: {start_date} ~ {end_date}")
     st.pyplot(fig_h)
 
-
-    st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)    
-
+    st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)
 
     # ----------------------------
     # 4. ロガー選択（複数選択）
