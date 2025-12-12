@@ -123,7 +123,7 @@ if uploaded:
             "outdoor_temp": "temperature_C",
             "outdoor_rh": "humidity_RH"
         }).copy()
-        outdoor_long["location"] = "Kyoto Meteostat(outside)"
+        outdoor_long["location"] = "meteostat(Kyoto)"
 
         df_merged = pd.concat([df_merged, outdoor_long[["datetime", "location", "temperature_C", "humidity_RH"]]])
         df_merged = df_merged.sort_values("datetime").reset_index(drop=True)
