@@ -206,8 +206,9 @@ if uploaded:
 
     # 外気
     if show_outdoor and outdoor is not None:
-        outdoor_range = outdoor[(outdoor.index >= start_dt) & (outdoor.index < end_dt)]
-        if outdoor is not None:
+        outdoor_range = outdoor[
+            (outdoor["datetime"] >= start_dt) & (outdoor["datetime"] < end_dt)
+        ]
             ax_h.plot(outdoor_range["datetime"], outdoor_range["outdoor_rh"],
                       label="Kyoto Meteostat", alpha=0.7)
 
