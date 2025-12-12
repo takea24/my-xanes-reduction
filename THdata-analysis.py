@@ -99,12 +99,6 @@ if uploaded:
 
             st.success("外気データ取得 + 30分補間 完了")
 
-            # --- ここで index を datetime に再設定（必須） ---
-            outdoor["datetime"] = pd.to_datetime(outdoor["datetime"])
-            outdoor = outdoor.set_index("datetime")
-
-
-            
         else:
             st.warning("外気データが取得できなかったため、外気比較はスキップします。")
             outdoor = None
@@ -190,8 +184,11 @@ if uploaded:
 
     # 外気
     if show_outdoor and outdoor is not None:
-        outdoor_range = outdoor.loc[start_dt:end_dt]
-        ax.plot(outdoor_range.index, outdoor_range["temp"], label="Kyoto Meteostat", alpha=0.7)
+        outdoor_range = outdoor[
+            (outdoor["datetime"] >= start_dt) & (outdoor["datetime"] < end_dt)
+        ]
+        ax.plot(outdoor_range["datetime"], outdoor_range["outdoor_temp"],
+                label="Kyoto Meteostat", alpha=0.7)
 
     ax.legend()
     ax.set_ylabel("Temperature (°C)")
@@ -209,9 +206,10 @@ if uploaded:
 
     # 外気
     if show_outdoor and outdoor is not None:
-        outdoor_range = outdoor.loc[start_dt:end_dt]
-        if "rhum" in outdoor_range.columns:  # Meteostat は 'rhum' が湿度
-            ax_h.plot(outdoor_range.index, outdoor_range["rhum"], label="Kyoto Meteostat", alpha=0.7)
+        outdoor_range = outdoor[(outdoor.index >= start_dt) & (outdoor.index < end_dt)]
+        if outdoor is not None:
+            ax_h.plot(outdoor_range["datetime"], outdoor_range["outdoor_rh"],
+                      label="Kyoto Meteostat", alpha=0.7)
 
     ax_h.legend()
     ax_h.set_ylabel("Relative Humidity (%)")
