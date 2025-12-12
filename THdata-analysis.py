@@ -656,10 +656,10 @@ if uploaded:
         logger_summary.append({
             "location": lg,
             "総サンプル数": total,
+            "温度基準範囲": f"{TEMP_LOW}–{TEMP_HIGH} °C",
             "温度が基準内 (%)": round(temp_good / total * 100, 1),
+            "湿度基準範囲": f"{RH_LOW}–{RH_HIGH} %",
             "湿度が基準内 (%)": round(rh_good / total * 100, 1),
-            "温度逸脱回数": total - temp_good,
-            "湿度逸脱回数": total - rh_good,
         })
 
     df_criteria = pd.DataFrame(logger_summary)
