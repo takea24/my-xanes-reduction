@@ -183,12 +183,12 @@ if uploaded:
     # ----------------------------
     # プロット：温度
     # ----------------------------
-    fig, ax = plt.subplots(figsize=(10,5), alpha=0.6)
+    fig, ax = plt.subplots(figsize=(10,5))
 
     # ロガー別にプロット
     for loc in selected_compare_locs:
         sub = selected_period[selected_period["location"] == loc]
-        ax.plot(sub["datetime"], sub["temperature_C"], label=loc)
+        ax.plot(sub["datetime"], sub["temperature_C"], label=loc, alpha=0.6)
 
     ax.legend()
     ax.set_ylabel("Temperature (°C)")
@@ -202,7 +202,7 @@ if uploaded:
 
     for loc in selected_compare_locs:
         sub = selected_period[selected_period["location"] == loc]
-        ax_h.plot(sub["datetime"], sub["humidity_RH"], label=loc)
+        ax_h.plot(sub["datetime"], sub["humidity_RH"], label=loc, alpha=0.6)
 
     ax_h.legend()
     ax_h.set_ylabel("Relative Humidity (%)")
