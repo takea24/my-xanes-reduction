@@ -127,6 +127,66 @@ if uploaded:
     st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)
 
     # ----------------------------
+    # 8. ロガー間比較 （任意期間）
+    # ----------------------------
+    st.subheader("ロガー間比較(重ねて表示)：任意期間の温度・湿度")
+
+    # --- 日付範囲指定 ---
+    min_date = df_merged["datetime"].min().date()
+    max_date = df_merged["datetime"].max().date()
+
+    start_date, end_date = st.date_input(
+        "表示する期間を選んでください",
+        value=(max_date - pd.Timedelta(days=7), max_date),
+        min_value=min_date,
+        max_value=max_date
+    )
+
+    # 入力された日付を datetime に変換
+    start_dt = pd.to_datetime(start_date)
+    end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1)  # 当日分を含めるため
+
+    # --- データ抽出 ---
+    selected_period = df_merged[
+        (df_merged["datetime"] >= start_dt) &
+        (df_merged["datetime"] < end_dt)
+    ]
+
+    # --- プロット ---
+    fig, ax = plt.subplots(figsize=(10,5))
+
+    for loc in selected_period["location"].unique():
+        ax.plot(
+            selected_period[selected_period["location"] == loc]["datetime"],
+            selected_period[selected_period["location"] == loc]["temperature_C"],
+            label=loc
+        )
+
+    ax.legend()
+    ax.set_ylabel("Temperature (°C)")
+    ax.set_title(f"Period: {start_date} ~ {end_date}")
+    st.pyplot(fig)
+
+    # プロット
+    fig_h, ax_h = plt.subplots(figsize=(10,5))
+
+    for loc in selected_period["location"].unique():
+        ax_h.plot(
+            selected_period[selected_period["location"] == loc]["datetime"],
+            selected_period[selected_period["location"] == loc]["humidity_RH"],
+            label=loc
+        )
+
+    ax_h.legend()
+    ax_h.set_ylabel("Relative Humidity (%)")
+    ax_h.set_title(f"Period: {start_date} ~ {end_date}")
+    st.pyplot(fig_h)
+
+
+    st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)    
+
+
+    # ----------------------------
     # 4. ロガー選択（複数選択）
     # ----------------------------
     st.subheader("ロガー選択")
@@ -231,64 +291,6 @@ if uploaded:
     st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)
 
 
-    # ----------------------------
-    # 8. ロガー間比較 （任意期間）
-    # ----------------------------
-    st.subheader("ロガー間比較：任意期間の温度・湿度, 重ねて表示")
-
-    # --- 日付範囲指定 ---
-    min_date = df_merged["datetime"].min().date()
-    max_date = df_merged["datetime"].max().date()
-
-    start_date, end_date = st.date_input(
-        "表示する期間を選んでください",
-        value=(max_date - pd.Timedelta(days=7), max_date),
-        min_value=min_date,
-        max_value=max_date
-    )
-
-    # 入力された日付を datetime に変換
-    start_dt = pd.to_datetime(start_date)
-    end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1)  # 当日分を含めるため
-
-    # --- データ抽出 ---
-    selected_period = df_merged[
-        (df_merged["datetime"] >= start_dt) &
-        (df_merged["datetime"] < end_dt)
-    ]
-
-    # --- プロット ---
-    fig, ax = plt.subplots(figsize=(10,5))
-
-    for loc in selected_period["location"].unique():
-        ax.plot(
-            selected_period[selected_period["location"] == loc]["datetime"],
-            selected_period[selected_period["location"] == loc]["temperature_C"],
-            label=loc
-        )
-
-    ax.legend()
-    ax.set_ylabel("Temperature (°C)")
-    ax.set_title(f"Period: {start_date} ~ {end_date}")
-    st.pyplot(fig)
-
-    # プロット
-    fig_h, ax_h = plt.subplots(figsize=(10,5))
-
-    for loc in selected_period["location"].unique():
-        ax_h.plot(
-            selected_period[selected_period["location"] == loc]["datetime"],
-            selected_period[selected_period["location"] == loc]["humidity_RH"],
-            label=loc
-        )
-
-    ax_h.legend()
-    ax_h.set_ylabel("Relative Humidity (%)")
-    ax_h.set_title(f"Period: {start_date} ~ {end_date}")
-    st.pyplot(fig_h)
-
-
-    st.markdown("<hr style='border:1.5px solid #bbb;'>", unsafe_allow_html=True)    
 
 
     # ----------------------------
