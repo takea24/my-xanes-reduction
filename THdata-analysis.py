@@ -183,7 +183,7 @@ if uploaded:
     # ----------------------------
     # プロット：温度
     # ----------------------------
-    fig, ax = plt.subplots(figsize=(10,5))
+    fig, ax = plt.subplots(figsize=(10,5), alpha=0.6)
 
     # ロガー別にプロット
     for loc in selected_compare_locs:
@@ -265,7 +265,7 @@ if uploaded:
         # 湿度グラフ
         st.subheader(f"{loc} の湿度の比較（館内 vs 外気）")
         fig, ax = plt.subplots(figsize=(10,4))
-        ax.plot(df_loc["datetime"], df_loc["humidity_RH"], label=f"{loc}(KUM)")
+        ax.plot(df_loc["datetime"], df_loc["humidity_RH"], label=f"{loc}(KUM)", color="tab:orange")
         if outdoor is not None and show_outdoor:
             ax.plot(df_loc["datetime"], df_loc["outdoor_rh"], label="Kyoto Meteostat", alpha=0.6, color="tab:green")
         ax.set_ylabel("Relative Humidity (%)")
@@ -283,9 +283,9 @@ if uploaded:
 
                 # --- 温度グラフ ---
                 fig, ax = plt.subplots(figsize=(10,4))
-                ax.plot(df_loc["datetime"], df_loc["temperature_C"], label=f"{loc}(KUM)")
+                ax.plot(df_loc["datetime"], df_loc["temperature_C"], label=f"{loc}(KUM)", color="tab:red")
                 if outdoor is not None and show_outdoor:
-                    ax.plot(df_loc["datetime"], df_loc["outdoor_temp"], label="Kyoto Meteostat", alpha=0.6)
+                    ax.plot(df_loc["datetime"], df_loc["outdoor_temp"], label="Kyoto Meteostat", alpha=0.6, color="tab:blue")
                 ax.set_ylabel("Temperature (°C)")
                 ax.legend()
                 ax.set_title(f"{loc} 温度")
@@ -299,7 +299,7 @@ if uploaded:
                 fig, ax = plt.subplots(figsize=(10,4))
                 ax.plot(df_loc["datetime"], df_loc["humidity_RH"], label=f"{loc}(KUM)", color="tab:orange")
                 if outdoor is not None and show_outdoor:
-                    ax.plot(df_loc["datetime"], df_loc["outdoor_rh"], label="Kyoto Meteostat", alpha=0.6)
+                    ax.plot(df_loc["datetime"], df_loc["outdoor_rh"], label="Kyoto Meteostat", alpha=0.6, color="tab:green")
                 ax.set_ylabel("Relative Humidity (%)")
                 ax.legend()
                 ax.set_title(f"{loc} 湿度")
