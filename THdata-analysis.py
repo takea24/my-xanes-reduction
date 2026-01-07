@@ -20,8 +20,11 @@ st.write(sys.version)
 try:
     from meteostat import Point, Hourly
     METEOSTAT_AVAILABLE = True
-except:
+except Exception as e:
     METEOSTAT_AVAILABLE = False
+    st.error("Meteostat import error:")
+    st.exception(e)
+
 
 st.title("館内温湿度ロガー解析（外気比較付き）")
 
