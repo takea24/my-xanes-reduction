@@ -12,6 +12,9 @@ from datetime import datetime
 
 import matplotlib.font_manager as fm
 
+import sys
+st.write(sys.version)
+
 
 # meteostat はオプション扱い
 try:
