@@ -14,6 +14,8 @@ import matplotlib.font_manager as fm
 
 import sys
 st.write(sys.version)
+st.write("Python:", sys.version)
+st.write("pandas:", pd.__version__)
 
 
 # meteostat はオプション扱い
