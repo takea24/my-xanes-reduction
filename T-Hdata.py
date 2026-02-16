@@ -40,9 +40,6 @@ for file in uploaded_files:
     hum_block = df[hum_cols].copy()
     tem_block = df[tem_cols].copy()
 
-    st.write(f"湿度ブロック shape: {hum_block.shape}")
-    st.write(f"温度ブロック shape: {tem_block.shape}")
-
     # long化
     hum_long = hum_block.melt(id_vars=[hum_cols[0]], var_name="Logger", value_name="Hum")
     tem_long = tem_block.melt(id_vars=[tem_cols[0]], var_name="Logger", value_name="Temp")

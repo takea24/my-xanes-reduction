@@ -209,9 +209,41 @@ if st.session_state.step1_done:
                     "intensity": FeKa_norm
                 })
                 
+                # --- Baseline individual control ---
+                st.write("- Baseline settings")
+
+                use_individual_bg = st.checkbox(
+                    f"{uploaded_file.name} Use individual baseline range",
+                    value=False,
+                    key=f"bg_toggle_{uploaded_file.name}"
+                )
+
+                if use_individual_bg:
+                    colb1, colb2 = st.columns(2)
+                    with colb1:
+                        bg_low_ind = st.number_input(
+                            f"{uploaded_file.name} Lower background limit (eV)",
+                            value=bg_low,
+                            step=0.01,
+                            key=f"bg_low_{uploaded_file.name}"
+                        )
+                    with colb2:
+                        bg_high_ind = st.number_input(
+                            f"{uploaded_file.name} Upper background limit (eV)",
+                            value=bg_high,
+                            step=0.01,
+                            key=f"bg_high_{uploaded_file.name}"
+                        )
+                    bg_low_use = bg_low_ind
+                    bg_high_use = bg_high_ind
+                else:
+                    bg_low_use = bg_low
+                    bg_high_use = bg_high
+
+                
                 # Baseline
-                mask_low = energy <= bg_low
-                mask_high=energy >= bg_high
+                mask_low = energy <= bg_low_use
+                mask_high = energy >= bg_high_use
                 E_low = energy[mask_low][np.argmax(FeKa_smooth[mask_low])]
                 I_low = FeKa_smooth[mask_low][np.argmax(FeKa_smooth[mask_low])]
                 E_high = energy[mask_high][np.argmin(FeKa_smooth[mask_high])]
