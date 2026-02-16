@@ -97,7 +97,7 @@ def find_zero_crossing(p, d2, search_min):
 # -----------------------------
 # Step 1: Fe-foil解析
 # -----------------------------
-st.title("XANES Multiple File Fitting with Pulse Reference ver1.0")
+st.title("XANES Multiple File Fitting with Pulse Reference ver1.1")
 
 if "step1_done" not in st.session_state:
     st.session_state.step1_done = False
