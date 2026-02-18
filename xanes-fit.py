@@ -209,14 +209,16 @@ if st.session_state.step1_done:
                     "intensity": FeKa_norm
                 })
                 
-                st.subheader(f"> File: {uploaded_file.name}")
+                # 区切り線を挿入
+                st.markdown("---")
+                st.subheader(f"File: {uploaded_file.name}")
 
                 
                 # --- Baseline individual control ---
                 st.write("- Baseline settings (option)")
 
                 use_individual_bg = st.checkbox(
-                    f"{uploaded_file.name} Use individual baseline range",
+                    f"ベースラインの調整が必要ならチェック",
                     value=False,
                     key=f"bg_toggle_{uploaded_file.name}"
                 )
@@ -396,8 +398,6 @@ if st.session_state.step1_done:
                     "Gaussian2_FWHM": FWHM2
                 })
 
-                # 区切り線を挿入
-                st.markdown("---")
                 
             except Exception as e:
                 st.error(f"Error processing {uploaded_file.name}: {e}")
