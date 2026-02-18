@@ -209,8 +209,11 @@ if st.session_state.step1_done:
                     "intensity": FeKa_norm
                 })
                 
+                st.subheader(f"> File: {uploaded_file.name}")
+
+                
                 # --- Baseline individual control ---
-                st.write("- Baseline settings")
+                st.write("- Baseline settings (option)")
 
                 use_individual_bg = st.checkbox(
                     f"{uploaded_file.name} Use individual baseline range",
@@ -253,7 +256,6 @@ if st.session_state.step1_done:
                 baseline = m_lin*energy+c_lin
 
                 # --- ここからガウシアン範囲を個別指定 ---
-                st.markdown(f"> File: {uploaded_file.name}")
                 st.write("- ガウシアンのfitting範囲を指定（option）")
                 col1, col2 = st.columns(2)
                 with col1:
