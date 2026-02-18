@@ -44,7 +44,7 @@ def two_gauss(E, A1, mu1, sigma1, A2, mu2, sigma2):
 SKIP_HEADER = 3
 SG_WINDOW = 31
 SG_POLY = 5
-DEFAULT_SEARCH_MIN = 581650
+DEFAULT_SEARCH_MIN = 581700
 
 def load_xanes_file(file):
     pulse_list=[]
