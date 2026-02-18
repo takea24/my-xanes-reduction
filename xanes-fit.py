@@ -289,7 +289,7 @@ if st.session_state.step1_done:
 
                 # Matplotlib
                 fig_mpl, ax = plt.subplots(figsize=(10,6), constrained_layout=True)
-                ax.plot(energy, FeKa_norm, 'ko', alpha=0.5, label='raw')
+                ax.plot(energy, FeKa_norm, 'ko', alpha=0.5,  label=f"{uploaded_file.name} (raw)")
                 ax.plot(energy, FeKa_smooth, 'k-', alpha=0.8, label='smoothed')
                 ax.plot(energy, baseline, 'r--', linewidth=2, label='baseline')
                 ax.plot(E_plot, g1_plot + baseline[mask_plot], 'g--', linewidth=3, label='Gaussian1')
@@ -342,7 +342,7 @@ if st.session_state.step1_done:
 
                 # Plotly描画（省略せず元コードと同じ）
                 fig_plotly=go.Figure()
-                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_norm,mode='markers',name='raw',marker=dict(color='black',opacity=0.5)))
+                fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_norm,mode='markers',name=f"{uploaded_file.name} (raw)",marker=dict(color='black',opacity=0.5)))
                 fig_plotly.add_trace(go.Scatter(x=energy,y=FeKa_smooth,mode='lines',name='smoothed',line=dict(color='gray')))
                 fig_plotly.add_trace(go.Scatter(x=energy,y=baseline,mode='lines',name='baseline',line=dict(color='red',dash='dash')))
                 fig_plotly.add_trace(go.Scatter(x=E_plot,y=g1_plot+baseline[mask_plot],mode='lines',name='Gaussian1',line=dict(color='green',dash='dash', width=3)))
