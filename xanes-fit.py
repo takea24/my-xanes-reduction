@@ -614,11 +614,11 @@ if st.session_state.step1_done:
                 # Reference-region label
                 ax.text(
                     x,
-                    y1 + 0.005,
+                    y1 - 0.005,
                     f"{ion} {coord}",
                     ha="center",
                     va="bottom",
-                    fontsize=10,
+                    fontsize=8,
                     zorder=3,
                     bbox=dict(
                         boxstyle="round,pad=0.2",
