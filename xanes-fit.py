@@ -444,45 +444,33 @@ if st.session_state.step1_done:
             st.subheader("ScatterPlot: Pre-edge centroid vs integrated intensity")
 
             # ---------------------------------
-            # Figure 2専用のFigureを作成
+            # Matplotlib Figure 2
             # ---------------------------------
-            fig2 = go.Figure()
+            fig2, ax2 = plt.subplots(figsize=(8, 6))
 
             # ---------------------------------
             # Approximate reference regions
             # ---------------------------------
-            # These are visual guides based on approximate
-            # Fe2+/Fe3+ and 4-/6-coordinate positions.
-            #
-            # Fe2+ 4-coord.: centroid ~7111.9 eV, intensity ~0.23
-            # Fe2+ 6-coord.: centroid ~7112.0 eV, intensity ~0.07
-            # Fe3+ 4-coord.: centroid ~7113.3 eV, intensity ~0.30
-            # Fe3+ 6-coord.: centroid ~7113.3 eV, intensity ~0.10
-            #
-            # Intensity range: approximately ±0.10
-            # Centroid range: approximately ±0.08 eV
-            # ---------------------------------
-
             reference_regions = [
                 {
                     "x": 7111.9,
                     "y": 0.23,
-                    "label": "Fe²⁺ 4-coord.",
+                    "label": "Fe$^{2+}$ 4-coord."
                 },
                 {
                     "x": 7112.0,
                     "y": 0.07,
-                    "label": "Fe²⁺ 6-coord.",
+                    "label": "Fe$^{2+}$ 6-coord."
                 },
                 {
                     "x": 7113.3,
                     "y": 0.30,
-                    "label": "Fe³⁺ 4-coord.",
+                    "label": "Fe$^{3+}$ 4-coord."
                 },
                 {
                     "x": 7113.3,
                     "y": 0.10,
-                    "label": "Fe³⁺ 6-coord.",
+                    "label": "Fe$^{3+}$ 6-coord."
                 },
             ]
 
@@ -495,117 +483,144 @@ if st.session_state.step1_done:
                 y1 = region["y"] + 0.07
 
                 # Reference region
-                fig2.add_shape(
-                    type="rect",
-                    x0=x0,
-                    x1=x1,
-                    y0=y0,
-                    y1=y1,
-                    fillcolor="rgba(180,180,180,0.12)",
-                    line=dict(
-                        color="rgba(220,220,220,0.75)",
-                        width=1,
-                        dash="dot"
-                    ),
-                    layer="below"
+                ax2.fill_between(
+                    [x0, x1],
+                    y0,
+                    y1,
+                    color="gray",
+                    alpha=0.15,
+                    zorder=1
                 )
 
-                # Region label
-                fig2.add_annotation(
-                    x=region["x"],
-                    y=y1,
-                    text=region["label"],
-                    showarrow=False,
-                    xanchor="center",
-                    yanchor="bottom",
-                    font=dict(
-                        color="white",
-                        size=11
-                    ),
-                    bgcolor="rgba(0,0,0,0.65)",
-                    bordercolor="rgba(220,220,220,0.6)",
-                    borderwidth=1,
-                    borderpad=3
+                # Reference region boundary
+                ax2.plot(
+                    [x0, x1, x1, x0, x0],
+                    [y0, y0, y1, y1, y0],
+                    color="gray",
+                    linestyle=":",
+                    linewidth=1,
+                    zorder=2
+                )
+
+                # Label
+                ax2.text(
+                    region["x"],
+                    y1 + 0.005,
+                    region["label"],
+                    ha="center",
+                    va="bottom",
+                    fontsize=10,
+                    zorder=3
                 )
 
             # ---------------------------------
-            # Sample points
+            # Sample points + centroid error
             # ---------------------------------
-            fig2.add_trace(
-                go.Scatter(
-                    x=df_fig2["Centroid"],
-                    y=df_fig2["Pre-edge Area"],
-                    mode="markers+text",
-                    text=df_fig2["File"],
-                    textposition="top center",
-                    textfont=dict(
-                        color="white",
-                        size=11
-                    ),
-                    marker=dict(
-                        size=10,
-                        color="white",
-                        line=dict(
-                            color="black",
-                            width=1.5
-                        )
-                    ),
-                    error_x=dict(
-                        type="data",
-                        array=df_fig2["Error"],
-                        visible=True,
-                        color="white",
-                        thickness=1
-                    ),
-                    name="Samples"
-                )
+            ax2.errorbar(
+                df_fig2["Centroid"],
+                df_fig2["Pre-edge Area"],
+                xerr=df_fig2["Error"],
+                fmt="o",
+                markersize=6,
+                markerfacecolor="white",
+                markeredgecolor="black",
+                markeredgewidth=1.2,
+                ecolor="black",
+                elinewidth=1,
+                capsize=3,
+                label="Samples",
+                zorder=10
             )
 
-            # ---------------------------------
-            # Layout
-            # ---------------------------------
-            fig2.update_layout(
-                template="plotly_dark",
-
-                xaxis=dict(
-                    title="Pre-edge centroid (eV)",
-                    range=[7111.5, 7113.7],
-                    dtick=0.5,
-                    gridcolor="rgba(200,200,200,0.20)",
-                    zeroline=False
-                ),
-
-                yaxis=dict(
-                    title="Integrated pre-edge intensity",
-                    range=[0, 0.42],
-                    dtick=0.1,
-                    gridcolor="rgba(200,200,200,0.20)",
-                    zeroline=False
-                ),
-
-                width=800,
-                height=600,
-
-                plot_bgcolor="#0e1117",
-                paper_bgcolor="#0e1117",
-
-                legend=dict(
-                    font=dict(color="white")
-                ),
-
-                margin=dict(
-                    l=80,
-                    r=30,
-                    t=40,
-                    b=70
+            # Sample labels
+            for _, row in df_fig2.iterrows():
+                ax2.annotate(
+                    row["File"],
+                    (row["Centroid"], row["Pre-edge Area"]),
+                    xytext=(5, 5),
+                    textcoords="offset points",
+                    fontsize=9,
+                    zorder=11
                 )
+
+            # ---------------------------------
+            # Axis settings
+            # ---------------------------------
+            ax2.set_xlim(7111.5, 7113.7)
+            ax2.set_ylim(0, 0.42)
+
+            ax2.set_xlabel(
+                "Pre-edge centroid (eV)",
+                fontsize=12
             )
 
-            st.plotly_chart(
-                fig2,
-                use_container_width=True
+            ax2.set_ylabel(
+                "Integrated pre-edge intensity",
+                fontsize=12
             )
 
+            ax2.set_xticks(
+                np.arange(7111.5, 7113.71, 0.5)
+            )
+
+            ax2.set_yticks(
+                np.arange(0, 0.41, 0.1)
+            )
+
+            # Tick appearance
+            ax2.tick_params(
+                axis="both",
+                labelsize=10,
+                direction="in"
+            )
+
+            # Thin grid
+            ax2.grid(
+                True,
+                linestyle=":",
+                linewidth=0.6,
+                alpha=0.5
+            )
+
+            # Keep a clean journal-style frame
+            ax2.spines["top"].set_visible(True)
+            ax2.spines["right"].set_visible(True)
+
+            ax2.legend(
+                frameon=False,
+                fontsize=10,
+                loc="upper left"
+            )
+
+            fig2.tight_layout()
+
+            # ---------------------------------
+            # Display in Streamlit
+            # ---------------------------------
+            st.pyplot(fig2)
+
+            # ---------------------------------
+            # PNG download
+            # ---------------------------------
+            png_buffer_fig2 = io.BytesIO()
+
+            fig2.savefig(
+                png_buffer_fig2,
+                dpi=300,
+                bbox_inches="tight"
+            )
+
+            png_buffer_fig2.seek(0)
+
+            st.download_button(
+                "Figure 2 PNG Download",
+                png_buffer_fig2,
+                file_name="preedge_centroid_vs_intensity.png",
+                mime="image/png"
+            )
+
+            plt.close(fig2)
+            
             with st.expander("📘 Fe K-edge XANES pre-edge 解析メモ", expanded=False):
 
                 st.markdown("""
