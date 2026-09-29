@@ -473,6 +473,120 @@ if st.session_state.step1_done:
 
             st.plotly_chart(fig2, use_container_width=True)
 
+            with st.expander("📘 Fe K-edge XANES pre-edge 解析メモ", expanded=False):
+
+                st.markdown("""
+                ### 1. Energy calibration
+
+                - Fe foil referenceを用いてエネルギー校正
+                - Fe foil の E₀ = **7111.08 eV**
+                - Si(111) monochromatorを使用
+
+                ### 2. Raw data processing
+
+                生データから吸収係数を
+
+                $$
+                \\mu(E) = \\frac{I_{\\mathrm{FeKa}}}{I_0}
+                $$
+
+                として計算する。
+
+                各データファイルの先頭 **3行を除外**して読み込む。
+
+                ### 3. Post-edge normalization
+
+                **7160–7200 eV** の平均値を1として規格化する。
+
+                $$
+                \\mu_{\\mathrm{norm}}(E)
+                =
+                \\frac{\\mu(E)}
+                {\\langle \\mu(E) \\rangle_{7160-7200}}
+                $$
+
+                今回は同一データセット内での相対比較を目的としているため、
+                全試料に同一のnormalization procedureを適用する。
+
+                ### 4. Pre-edge background
+
+                Pre-edge fitting range：**7110–7115 eV**
+
+                - Low-energy側：≤ **7110 eV**
+                - High-energy側：≥ **7114 eV**
+                - 両領域からbaseline位置を決定
+                - 2点を結ぶlinear baselineを作成
+                - baselineをスペクトルから差し引く
+
+                ### 5. Gaussian fitting
+
+                Pre-edge featureを **2 Gaussian** でfitする。
+
+                初期peak位置：
+
+                - Gaussian 1：**7111.8 eV**
+                - Gaussian 2：**7113.7 eV**
+
+                各Gaussianの面積を
+
+                $$
+                I_i = A_i \\sigma_i \\sqrt{2\\pi}
+                $$
+
+                とする。
+
+                ### 6. Integrated pre-edge intensity
+
+                2つのGaussianの面積の合計を
+                integrated pre-edge intensityとする。
+
+                $$
+                I_{\\mathrm{pre}}
+                =
+                I_1 + I_2
+                $$
+
+                すなわち、
+
+                $$
+                I_{\\mathrm{pre}}
+                =
+                \\sqrt{2\\pi}
+                (A_1\\sigma_1 + A_2\\sigma_2)
+                $$
+
+                **Figure 2 の縦軸**に使用する。
+
+                ### 7. Pre-edge centroid
+
+                Gaussianの面積を重みとしたenergyの加重平均として計算する。
+
+                $$
+                E_c =
+                \\frac{E_1 I_1 + E_2 I_2}
+                {I_1 + I_2}
+                $$
+
+                **Figure 2 の横軸**に使用する。
+
+                ### 8. Interpretation
+
+                Pre-edge centroidおよびintegrated intensityは、
+                Feの酸化状態および局所配位環境を評価するための指標として使用する。
+
+                現在の解析では、全試料に同一のnormalization、
+                background subtraction、Gaussian fitting procedureを適用し、
+                **主としてデータセット内での相対比較**を行う。
+
+                文献（Wilke et al., 2001; Boubnov et al., 2015; Ozawa et al., 2022）
+                のreference fieldと直接比較する場合には、
+                normalizationおよびpre-edge/background処理方法の整合性を確認する必要がある。
+
+                ---
+                **注意：**
+                integrated pre-edge intensityはcoordination numberそのものではなく、
+                Feの局所配位・対称性・酸化状態などを反映する経験的指標として扱う。
+                """)
 
         # ZIP一括
         if png_buffers:
