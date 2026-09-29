@@ -613,7 +613,7 @@ if st.session_state.step1_done:
 
                 # Reference-region label
                 ax.text(
-                    x - 0.5,
+                    x - 0.25,
                     y1 - 0.01,
                     f"{ion} {coord}",
                     ha="center",
