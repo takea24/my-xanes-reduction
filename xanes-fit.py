@@ -420,6 +420,7 @@ if st.session_state.step1_done:
             st.plotly_chart(fig_overlay, use_container_width=True)
 
 
+
         # Summary
         if all_params:
             df_all = pd.DataFrame(all_params)
@@ -433,6 +434,128 @@ if st.session_state.step1_done:
                 file_name="all_fitting_parameters.csv",
                 mime="text/csv"
             )
+            
+        # ============================================================
+        # Figure 2: Pre-edge centroid vs integrated intensity
+        # ブラウザ表示用（Plotly）
+        # ============================================================
+        if all_params:
+            df_fig2 = pd.DataFrame(all_params)
+
+            fig2 = go.Figure()
+
+            # --- 参考領域 ---
+            # Fe2+ 4-coordinate
+            fig2.add_shape(
+                type="rect",
+                x0=7111.8, x1=7112.0,
+                y0=0.13, y1=0.33,
+                fillcolor="gray",
+                opacity=0.20,
+                line=dict(color="gray", dash="dot")
+            )
+
+            # Fe2+ 6-coordinate
+            fig2.add_shape(
+                type="rect",
+                x0=7111.9, x1=7112.1,
+                y0=0.0, y1=0.17,
+                fillcolor="gray",
+                opacity=0.20,
+                line=dict(color="gray", dash="dot")
+            )
+
+            # Fe3+ 4-coordinate
+            fig2.add_shape(
+                type="rect",
+                x0=7113.1, x1=7113.5,
+                y0=0.20, y1=0.40,
+                fillcolor="gray",
+                opacity=0.20,
+                line=dict(color="gray", dash="dot")
+            )
+
+            # Fe3+ 6-coordinate
+            fig2.add_shape(
+                type="rect",
+                x0=7113.1, x1=7113.5,
+                y0=0.0, y1=0.20,
+                fillcolor="gray",
+                opacity=0.20,
+                line=dict(color="gray", dash="dot")
+            )
+
+            # --- 領域ラベル ---
+            fig2.add_annotation(
+                x=7111.9, y=0.31,
+                text="Fe²⁺<br>4-coord.",
+                showarrow=False,
+                font=dict(color="white")
+            )
+
+            fig2.add_annotation(
+                x=7112.0, y=0.14,
+                text="Fe²⁺<br>6-coord.",
+                showarrow=False,
+                font=dict(color="white")
+            )
+
+            fig2.add_annotation(
+                x=7113.3, y=0.38,
+                text="Fe³⁺<br>4-coord.",
+                showarrow=False,
+                font=dict(color="white")
+            )
+
+            fig2.add_annotation(
+                x=7113.3, y=0.17,
+                text="Fe³⁺<br>6-coord.",
+                showarrow=False,
+                font=dict(color="white")
+            )
+
+            # --- 試料 ---
+            fig2.add_trace(
+                go.Scatter(
+                    x=df_fig2["Centroid"],
+                    y=df_fig2["Pre-edge Area"],
+                    mode="markers+text",
+                    text=df_fig2["File"],
+                    textposition="top center",
+                    name="Samples",
+                    marker=dict(
+                        size=9,
+                        color="white",
+                        line=dict(color="black", width=1.5)
+                    ),
+                    error_x=dict(
+                        type="data",
+                        array=df_fig2["Error"],
+                        visible=True
+                    )
+                )
+            )
+
+            # --- レイアウト ---
+            fig2.update_layout(
+                template="plotly_dark",
+                title="Pre-edge centroid vs integrated intensity",
+                xaxis_title="Pre-edge centroid (eV)",
+                yaxis_title="Integrated pre-edge intensity",
+                xaxis=dict(
+                    range=[7111.5, 7113.7],
+                    dtick=0.5
+                ),
+                yaxis=dict(
+                    range=[0, 0.42],
+                    dtick=0.1
+                ),
+                width=800,
+                height=600
+            )
+
+            st.plotly_chart(fig2, use_container_width=True)
+
 
         # -----------------------------
         # Figure 2 style (Ozawa+2022):
