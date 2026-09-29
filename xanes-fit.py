@@ -482,16 +482,33 @@ if st.session_state.step1_done:
                 )
 
                 # Reference-region labels
+                if ion == "Fe²⁺":
+                    label_x = x0
+                    label_y = y1
+                    xanchor = "left"
+                    xshift = 5
+                else:
+                    label_x = x1
+                    label_y = y1
+                    xanchor = "right"
+                    xshift = -5
+
+                # 4-coord / 6-coordで少し上下を分ける
+                if coord == "4-coord.":
+                    yshift = 5
+                else:
+                    yshift = -5
+
                 fig2.add_annotation(
-                    x=x,
-                    y=y1,
+                    x=label_x,
+                    y=label_y,
                     text=f"<b>{ion}</b><br>{coord}",
                     showarrow=False,
-                    yshift=8,
-                    font=dict(
-                        color="white",
-                        size=12
-                    ),
+                    xanchor=xanchor,
+                    yanchor="bottom",
+                    xshift=xshift,
+                    yshift=yshift,
+                    font=dict(color="white", size=12),
                     bgcolor="rgba(80,80,80,0.75)",
                     bordercolor="gray",
                     borderwidth=1,
