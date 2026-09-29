@@ -97,7 +97,7 @@ def find_zero_crossing(p, d2, search_min):
 # -----------------------------
 # Step 1: Fe-foil解析
 # -----------------------------
-st.title("XANES Multiple File Fitting with Pulse Reference ver1.1")
+st.title("XANES Multiple File Fitting with Pulse Reference ver1.2")
 
 if "step1_done" not in st.session_state:
     st.session_state.step1_done = False
@@ -388,6 +388,7 @@ if st.session_state.step1_done:
                     "File": uploaded_file.name,
                     "Centroid": centroid,
                     "Error": d_centroid,
+                    "Pre-edge Area": area1 + area2,
                     "Gaussian1_A": A1,
                     "Gaussian1_mu": mu1,
                     "Gaussian1_sigma": sigma1,
@@ -433,6 +434,46 @@ if st.session_state.step1_done:
                 mime="text/csv"
             )
 
+        # -----------------------------
+        # Figure 2 style(Ozawa+2022): Pre-edge centroid vs integrated intensity
+        # -----------------------------
+        if all_params:
+            df_fig2 = pd.DataFrame(all_params)
+
+            st.subheader("Figure 2: Pre-edge centroid vs integrated intensity")
+
+            fig2 = go.Figure()
+
+            fig2.add_trace(
+                go.Scatter(
+                    x=df_fig2["Centroid"],
+                    y=df_fig2["Pre-edge Area"],
+                    mode="markers+text",
+                    text=df_fig2["File"],
+                    textposition="top center",
+                    marker=dict(
+                        size=10,
+                        color="black"
+                    ),
+                    error_x=dict(
+                        type="data",
+                        array=df_fig2["Error"],
+                        visible=True
+                    ),
+                    name="Samples"
+                )
+            )
+
+            fig2.update_layout(
+                xaxis_title="Pre-edge centroid (eV)",
+                yaxis_title="Integrated pre-edge intensity",
+                width=800,
+                height=600
+            )
+
+            st.plotly_chart(fig2, use_container_width=True)
+
+
         # ZIP一括
         if png_buffers:
             zip_buffer=io.BytesIO()
@@ -442,6 +483,7 @@ if st.session_state.step1_done:
             zip_buffer.seek(0)
             st.download_button("Download all PNGgraphs as ZIP", zip_buffer, file_name="all_fittings.zip")
 
+        # -----------------------------
         # Step 3: Fe3+ calculation from calibration
         # -----------------------------
         st.subheader("Step 3: Fe³⁺ calculation from calibration line")
