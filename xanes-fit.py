@@ -435,6 +435,8 @@ if st.session_state.step1_done:
                 mime="text/csv"
             )
             
+            
+            
         # ============================================================
         # Pre-edge centroid vs integrated intensity
         # ============================================================
@@ -443,7 +445,10 @@ if st.session_state.step1_done:
 
             st.subheader("ScatterPlot: Pre-edge centroid vs integrated intensity")
 
+            # ========================================================
             # Reference regions
+            # (centroid, intensity, oxidation state, coordination)
+            # ========================================================
             reference_regions = [
                 (7111.9, 0.23, "Fe²⁺", "4-coord."),
                 (7112.0, 0.07, "Fe²⁺", "6-coord."),
@@ -456,65 +461,89 @@ if st.session_state.step1_done:
             # ========================================================
             fig2 = go.Figure()
 
-            for x, y, label in reference_regions:
+            # Reference regions
+            for x, y, ion, coord in reference_regions:
+
                 x0, x1 = x - 0.25, x + 0.25
                 y0, y1 = max(0, y - 0.07), y + 0.07
 
-            for x, y, ion, coord in reference_regions:
-                    x0, x1 = x - 0.25, x + 0.25
-                    y0, y1 = max(0, y - 0.07), y + 0.07
-
-                    fig2.add_shape(
-                        type="rect",
-                        x0=x0, x1=x1,
-                        y0=y0, y1=y1,
-                        fillcolor="gray",
-                        opacity=0.20,
-                        line=dict(color="gray", dash="dot")
-                    )
-
-                    # 基準領域のラベル
-                    fig2.add_annotation(
-                        x=x,
-                        y=y1,
-                        text=f"<b>{ion}</b><br>{coord}",
-                        showarrow=False,
-                        yshift=8,
-                        font=dict(color="white", size=12)
-                    )
-                    
-               fig2.add_trace(
-                    go.Scatter(
-                        x=df_fig2["Centroid"],
-                        y=df_fig2["Pre-edge Area"],
-                        mode="markers",
-                        name="Samples",
-                        marker=dict(
-                            size=9,
-                            color="white",
-                            line=dict(color="black", width=1.5)
-                        ),
-                        error_x=dict(
-                            type="data",
-                            array=df_fig2["Error"],
-                            visible=True
-                        )
+                fig2.add_shape(
+                    type="rect",
+                    x0=x0,
+                    x1=x1,
+                    y0=y0,
+                    y1=y1,
+                    fillcolor="gray",
+                    opacity=0.20,
+                    line=dict(
+                        color="gray",
+                        dash="dot"
                     )
                 )
 
-                # Sample labels
-                for _, row in df_fig2.iterrows():
-                    fig2.add_annotation(
-                        x=row["Centroid"],
-                        y=row["Pre-edge Area"],
-                        text=row["File"],
-                        showarrow=False,
-                        xshift=8,
-                        yshift=8,
-                        xanchor="left",
-                        yanchor="bottom",
-                        font=dict(size=10, color="white")
+                # Reference-region labels
+                fig2.add_annotation(
+                    x=x,
+                    y=y1,
+                    text=f"<b>{ion}</b><br>{coord}",
+                    showarrow=False,
+                    yshift=8,
+                    font=dict(
+                        color="white",
+                        size=12
+                    ),
+                    bgcolor="rgba(80,80,80,0.75)",
+                    bordercolor="gray",
+                    borderwidth=1,
+                    borderpad=3
+                )
+
+            # ========================================================
+            # Sample points
+            # ========================================================
+            fig2.add_trace(
+                go.Scatter(
+                    x=df_fig2["Centroid"],
+                    y=df_fig2["Pre-edge Area"],
+                    mode="markers",
+                    name="Samples",
+                    marker=dict(
+                        size=9,
+                        color="white",
+                        line=dict(
+                            color="black",
+                            width=1.5
+                        )
+                    ),
+                    error_x=dict(
+                        type="data",
+                        array=df_fig2["Error"],
+                        visible=True
                     )
+                )
+            )
+
+            # Sample labels
+            for _, row in df_fig2.iterrows():
+
+                fig2.add_annotation(
+                    x=row["Centroid"],
+                    y=row["Pre-edge Area"],
+                    text=row["File"],
+                    showarrow=False,
+                    xshift=8,
+                    yshift=8,
+                    xanchor="left",
+                    yanchor="bottom",
+                    font=dict(
+                        size=10,
+                        color="white"
+                    )
+                )
+
+            # ========================================================
+            # Plotly layout
+            # ========================================================
             fig2.update_layout(
                 template="plotly_dark",
                 xaxis=dict(
@@ -531,21 +560,29 @@ if st.session_state.step1_done:
                 height=600
             )
 
-            st.plotly_chart(fig2, use_container_width=True)
+            st.plotly_chart(
+                fig2,
+                use_container_width=True
+            )
 
-
-            # ========================================================
+            # ============================================================
             # PNG保存用：Matplotlib
-            # ========================================================
+            # ============================================================
             fig_png, ax = plt.subplots(figsize=(8, 6))
 
-            for x, y, label in reference_regions:
+            # Reference regions
+            for x, y, ion, coord in reference_regions:
+
                 x0, x1 = x - 0.25, x + 0.25
                 y0, y1 = max(0, y - 0.07), y + 0.07
 
                 ax.fill_between(
-                    [x0, x1], y0, y1,
-                    color="gray", alpha=0.15, zorder=1
+                    [x0, x1],
+                    y0,
+                    y1,
+                    color="gray",
+                    alpha=0.15,
+                    zorder=1
                 )
 
                 ax.plot(
@@ -557,15 +594,26 @@ if st.session_state.step1_done:
                     zorder=2
                 )
 
+                # Reference-region label
                 ax.text(
-                    x, y1 + 0.005,
-                    label,
+                    x,
+                    y1 + 0.005,
+                    f"{ion} {coord}",
                     ha="center",
                     va="bottom",
                     fontsize=10,
-                    zorder=3
+                    zorder=3,
+                    bbox=dict(
+                        boxstyle="round,pad=0.2",
+                        facecolor="white",
+                        edgecolor="gray",
+                        alpha=0.8
+                    )
                 )
 
+            # ========================================================
+            # Sample points
+            # ========================================================
             ax.errorbar(
                 df_fig2["Centroid"],
                 df_fig2["Pre-edge Area"],
@@ -582,7 +630,9 @@ if st.session_state.step1_done:
                 zorder=10
             )
 
+            # Sample labels
             for _, row in df_fig2.iterrows():
+
                 ax.annotate(
                     row["File"],
                     (row["Centroid"], row["Pre-edge Area"]),
@@ -592,14 +642,29 @@ if st.session_state.step1_done:
                     zorder=11
                 )
 
+            # ========================================================
+            # Axis settings
+            # ========================================================
             ax.set_xlim(7111.5, 7113.7)
             ax.set_ylim(0, 0.42)
 
-            ax.set_xlabel("Pre-edge centroid (eV)", fontsize=12)
-            ax.set_ylabel("Integrated pre-edge intensity", fontsize=12)
+            ax.set_xlabel(
+                "Pre-edge centroid (eV)",
+                fontsize=12
+            )
 
-            ax.set_xticks(np.arange(7111.5, 7113.71, 0.5))
-            ax.set_yticks(np.arange(0, 0.41, 0.1))
+            ax.set_ylabel(
+                "Integrated pre-edge intensity",
+                fontsize=12
+            )
+
+            ax.set_xticks(
+                np.arange(7111.5, 7113.71, 0.5)
+            )
+
+            ax.set_yticks(
+                np.arange(0, 0.41, 0.1)
+            )
 
             ax.tick_params(
                 axis="both",
@@ -622,7 +687,9 @@ if st.session_state.step1_done:
 
             fig_png.tight_layout()
 
+            # ========================================================
             # PNG download
+            # ========================================================
             png_buffer_fig2 = io.BytesIO()
 
             fig_png.savefig(
@@ -641,6 +708,11 @@ if st.session_state.step1_done:
             )
 
             plt.close(fig_png)
+            
+            
+            # ========================================================
+            # Note
+            # ========================================================
             with st.expander("📘 Fe K-edge XANES pre-edge 解析メモ", expanded=False):
 
                 st.markdown("""
