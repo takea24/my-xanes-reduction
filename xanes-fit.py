@@ -488,8 +488,8 @@ if st.session_state.step1_done:
 
             for region in reference_regions:
 
-                x0 = region["x"] - 0.08
-                x1 = region["x"] + 0.08
+                x0 = region["x"] - 0.25
+                x1 = region["x"] + 0.25
 
                 y0 = max(0, region["y"] - 0.07)
                 y1 = region["y"] + 0.07
