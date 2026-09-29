@@ -440,85 +440,146 @@ if st.session_state.step1_done:
         if all_params:
             df_fig2 = pd.DataFrame(all_params)
 
-            st.subheader("Figure 2: Pre-edge centroid vs integrated intensity")
+            st.subheader("ScatterPlot: Pre-edge centroid vs integrated intensity")
 
             fig2 = go.Figure()
 
-            fig2.add_trace(
-                go.Scatter(
-                    x=df_fig2["Centroid"],
-                    y=df_fig2["Pre-edge Area"],
-                    mode="markers+text",
-                    text=df_fig2["File"],
-                    textposition="top center",
-                    marker=dict(
-                        size=10,
-                        color="black"
+            # --- User samples ---
+            fig.add_trace(go.Scatter(
+                x=df_fig2["Centroid"],
+                y=df_fig2["Pre-edge Area"],
+                mode="markers+text",
+                text=df_fig2["File"],
+                textposition="top center",
+                name="Samples",
+                marker=dict(
+                    size=9,
+                    color="white",
+                    line=dict(color="black", width=1.5)
+                )
+            ))
+
+            # ============================================================
+            # Approximate Fe coordination / oxidation-state regions
+            # ============================================================
+
+            # Center positions
+            reference_regions = [
+                {
+                    "label": "Fe²⁺ 4-coord.",
+                    "x": 7111.9,
+                    "y": 0.23,
+                },
+                {
+                    "label": "Fe²⁺ 6-coord.",
+                    "x": 7112.0,
+                    "y": 0.07,
+                },
+                {
+                    "label": "Fe³⁺ 4-coord.",
+                    "x": 7113.3,
+                    "y": 0.30,
+                },
+                {
+                    "label": "Fe³⁺ 6-coord.",
+                    "x": 7113.3,
+                    "y": 0.10,
+                },
+            ]
+
+            # Intensity range: approximately ±0.10
+            y_half_width = 0.10
+
+            # Width in centroid direction.
+            # This is only a visual guide, not a quantitative boundary.
+            x_half_width = 0.08
+
+            for ref in reference_regions:
+
+                x0 = ref["x"]
+                y0 = ref["y"]
+
+                # Approximate reference region
+                fig.add_shape(
+                    type="rect",
+                    x0=x0 - x_half_width,
+                    x1=x0 + x_half_width,
+                    y0=max(0, y0 - y_half_width),
+                    y1=y0 + y_half_width,
+
+                    # Transparent fill so sample points remain visible
+                    fillcolor="rgba(180,180,180,0.12)",
+
+                    # Bright border for dark-mode visibility
+                    line=dict(
+                        color="rgba(220,220,220,0.75)",
+                        width=1.5,
+                        dash="dot"
                     ),
-                    error_x=dict(
-                        type="data",
-                        array=df_fig2["Error"],
-                        visible=True
+
+                    layer="below"
+                )
+
+                # Label
+                fig.add_annotation(
+                    x=x0,
+                    y=y0,
+                    text=ref["label"],
+                    showarrow=False,
+
+                    font=dict(
+                        color="white",
+                        size=11
                     ),
-                    name="Samples"
+
+                    bgcolor="rgba(0,0,0,0.45)",
+                    bordercolor="rgba(220,220,220,0.6)",
+                    borderwidth=1,
+                    borderpad=3,
+
+                    xanchor="center",
+                    yanchor="middle"
+                )
+
+
+            # ============================================================
+            # Layout
+            # ============================================================
+
+            fig.update_layout(
+                title="Pre-edge centroid vs integrated intensity",
+
+                xaxis=dict(
+                    title="Pre-edge centroid (eV)",
+                    showgrid=True,
+                    gridcolor="rgba(180,180,180,0.25)",
+                    zeroline=False
+                ),
+
+                yaxis=dict(
+                    title="Integrated pre-edge intensity",
+                    showgrid=True,
+                    gridcolor="rgba(180,180,180,0.25)",
+                    zeroline=False
+                ),
+
+                template="plotly_dark",
+
+                hovermode="closest",
+
+                legend=dict(
+                    bgcolor="rgba(0,0,0,0.3)"
                 )
             )
 
-            fig2.update_layout(
-                xaxis_title="Pre-edge centroid (eV)",
-                yaxis_title="Integrated pre-edge intensity",
-                width=800,
-                height=600
-            )
+            st.plotly_chart(fig, use_container_width=True)
 
-            st.plotly_chart(fig2, use_container_width=True)
 
             with st.expander("📘 Fe K-edge XANES pre-edge 解析メモ", expanded=False):
 
                 st.markdown("""
-                ### 1. Energy calibration
 
-                - Fe foil referenceを用いてエネルギー校正
-                - Fe foil の E₀ = **7111.08 eV**
-                - Si(111) monochromatorを使用
-
-                ### 2. Raw data processing
-
-                生データから吸収係数を
-
-                $$
-                \\mu(E) = \\frac{I_{\\mathrm{FeKa}}}{I_0}
-                $$
-
-                として計算する。
-
-                各データファイルの先頭 **3行を除外**して読み込む。
-
-                ### 3. Post-edge normalization
-
-                **7160–7200 eV** の平均値を1として規格化する。
-
-                $$
-                \\mu_{\\mathrm{norm}}(E)
-                =
-                \\frac{\\mu(E)}
-                {\\langle \\mu(E) \\rangle_{7160-7200}}
-                $$
-
-                今回は同一データセット内での相対比較を目的としているため、
-                全試料に同一のnormalization procedureを適用する。
-
-                ### 4. Pre-edge background
-
-                Pre-edge fitting range：**7110–7115 eV**
-
-                - Low-energy側：≤ **7110 eV**
-                - High-energy側：≥ **7114 eV**
-                - 両領域からbaseline位置を決定
-                - 2点を結ぶlinear baselineを作成
-                - baselineをスペクトルから差し引く
-
-                ### 5. Gaussian fitting
+                ### Gaussian fitting
 
                 Pre-edge featureを **2 Gaussian** でfitする。
 
@@ -535,7 +596,7 @@ if st.session_state.step1_done:
 
                 とする。
 
-                ### 6. Integrated pre-edge intensity
+                ### Integrated pre-edge intensity
 
                 2つのGaussianの面積の合計を
                 integrated pre-edge intensityとする。
@@ -555,9 +616,9 @@ if st.session_state.step1_done:
                 (A_1\\sigma_1 + A_2\\sigma_2)
                 $$
 
-                **Figure 2 の縦軸**に使用する。
+                **ScatterPlot の縦軸**に使用する。
 
-                ### 7. Pre-edge centroid
+                ### Pre-edge centroid
 
                 Gaussianの面積を重みとしたenergyの加重平均として計算する。
 
@@ -567,9 +628,9 @@ if st.session_state.step1_done:
                 {I_1 + I_2}
                 $$
 
-                **Figure 2 の横軸**に使用する。
+                **ScatterPlot の横軸**に使用する。
 
-                ### 8. Interpretation
+                ### Interpretation
 
                 Pre-edge centroidおよびintegrated intensityは、
                 Feの酸化状態および局所配位環境を評価するための指標として使用する。
