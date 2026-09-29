@@ -271,7 +271,7 @@ if st.session_state.step1_done:
                 # 初期値・範囲はデフォルトのまま
                 p0_gauss=[0.001,7111.8,0.5,0.001,7113.7,0.5]
                 lower=[0,7110,0,0,7112,0]
-                upper=[np.inf,7112,1,np.inf,7114,1]
+                upper=[np.inf,7113,1,np.inf,7115,1]
                 popt, pcov = curve_fit(two_gauss, E_gauss, I_gauss,
                        p0=p0_gauss, bounds=(lower, upper), maxfev=5000)
 
