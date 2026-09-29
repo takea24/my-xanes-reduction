@@ -486,18 +486,18 @@ if st.session_state.step1_done:
                     label_x = x0
                     label_y = y1
                     xanchor = "left"
-                    xshift = -20
+                    xshift = -25
                 else:
                     label_x = x1
                     label_y = y1
                     xanchor = "right"
-                    xshift = 20
+                    xshift = 25
 
                 # 4-coord / 6-coordで少しさげる
                 if coord == "4-coord.":
                     yshift = -20
                 else:
-                    yshift = -50
+                    yshift = -35
 
                 fig2.add_annotation(
                     x=label_x,
